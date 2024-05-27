@@ -25,7 +25,7 @@ async function main() {
     const canvasFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat()
     context.configure({
         device,
-        format: canvasFormat
+        format: canvasFormat,
     })
     //*********************************************************************************************************
 
@@ -33,22 +33,39 @@ async function main() {
     let height: number = 512
 
     let resolution: number = (width < height) ? width : height // pixels resolution x resolution
+    resolution = 512
     let gridSize: number = Math.floor(resolution / 4) // grid = gridSize x gridSize
     let sideLength: number = resolution / gridSize //square side lenght
-    let shape: number = 1
+    let shape: number = 3
 
-    const lines = new Float32Array(gridSize * gridSize * 4 * 2)
+    const paramsArrayBuffer = new ArrayBuffer(16) // 2 u32 e 2 f32
+    const paramsUint32View = new Uint32Array(paramsArrayBuffer)
+    const paramsFloat32View = new Float32Array(paramsArrayBuffer)
+    paramsUint32View[0] = shape
+    paramsUint32View[1] = gridSize
+    paramsFloat32View[2] = resolution
+    paramsFloat32View[3] = sideLength
 
-    const linesBuffer: GPUBuffer[] = [
+    const paramsValues = new Float32Array([resolution,sideLength,gridSize,shape])
+    const paramsBuffer: GPUBuffer = device.createBuffer({
+        label: 'Params buffer',
+        size: paramsArrayBuffer.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+    device.queue.writeBuffer(paramsBuffer,0,paramsArrayBuffer)
+
+    const points = new Float32Array(gridSize * gridSize * 4 * 2)
+
+    const pointsBuffer: GPUBuffer[] = [
         device.createBuffer({
-            label: 'Lines vertices A',
-            size: lines.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST ,
+            label: 'Points vertices A',
+            size: points.byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         }),
         device.createBuffer({
-            label: 'Lines vertices B',
-            size: lines.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST ,
+            label: 'Points vertices B',
+            size: points.byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         })
     ]
 
@@ -64,6 +81,11 @@ async function main() {
             visibility: GPUShaderStage.COMPUTE,
             buffer: { type: 'storage' }
         },
+        {
+            binding: 2,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.COMPUTE,
+            buffer: { type: 'uniform' }
+        },
         ]
     })
 
@@ -73,11 +95,15 @@ async function main() {
             layout: bindGroupLayout,
             entries: [{
                 binding: 0,
-                resource: { buffer: linesBuffer[0] },
+                resource: { buffer: pointsBuffer[0] },
             },
             {
                 binding: 1,
-                resource: { buffer: linesBuffer[1] },
+                resource: { buffer: pointsBuffer[1] },
+            },
+            {
+                binding: 2,
+                resource: { buffer: paramsBuffer },
             },
             ]
         }),
@@ -86,11 +112,15 @@ async function main() {
             layout: bindGroupLayout,
             entries: [{
                 binding: 0,
-                resource: { buffer: linesBuffer[1] },
+                resource: { buffer: pointsBuffer[1] },
             },
             {
                 binding: 1,
-                resource: { buffer: linesBuffer[0] },
+                resource: { buffer: pointsBuffer[0] },
+            },
+            {
+                binding: 2,
+                resource: { buffer: paramsBuffer },
             },
             ]
         })
@@ -146,7 +176,7 @@ async function main() {
         computePass.setPipeline(simulationPipeline)
         computePass.setBindGroup(0, bindGroup[0])
         const worgroupCount: number = gridSize
-        computePass.dispatchWorkgroups(worgroupCount/8, worgroupCount/8)
+        computePass.dispatchWorkgroups(worgroupCount / 8, worgroupCount / 8)
         computePass.end()
 
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
@@ -162,7 +192,7 @@ async function main() {
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
         renderPass.setBindGroup(0, bindGroup[1])
-        renderPass.draw(lines.length / 2)
+        renderPass.draw(points.length / 2)
         renderPass.end()
         device.queue.submit([encoder.finish()])
     }

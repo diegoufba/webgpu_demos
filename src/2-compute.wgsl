@@ -1,27 +1,32 @@
-
+struct Params {
+    shape: u32,
+    gridSize: u32,
+    resolution: f32,
+    sideLength: f32
+  };
 
 fn getState(a: f32, b: f32, c: f32, d: f32) -> f32 {
     return a * 8 + b * 4 + c * 2 + d;
 }
 
-fn isInside(x: f32, y: f32, selector: i32) -> f32 {
-    // var xc: f32 = params.resolution / 2.0;
-    // var yc: f32 = params.resolution / 2.0;
-    let resolution: f32 = 512;
-    var xc: f32 = resolution / 2.0;
-    var yc: f32 = resolution / 2.0;
+fn isInside(x: f32, y: f32, selector: u32) -> f32 {
+    var xc: f32 = params.resolution / 2.0;
+    var yc: f32 = params.resolution / 2.0;
+    // let resolution: f32 = 512;
+    // let xc: f32 = resolution / 2.0;
+    // let yc: f32 = resolution / 2.0;
 
     // Variáveis comuns para algumas das funções
-    var xp = x - xc;
-    var yp = y - yc;
+    let xp = x - xc;
+    let yp = y - yc;
 
     switch (selector) {
         case 1: {
             // Função 1: Estrela
-            var theta = atan2(yp, xp);
-            var r = sqrt(xp * xp + yp * yp);
-            var n: f32 = 10.0;
-            var star_r = (resolution / 4.0) + (resolution / 8.0) * sin(n * theta);
+            let theta = atan2(yp, xp);
+            let r = sqrt(xp * xp + yp * yp);
+            let n: f32 = 10.0;
+            let star_r = (params.resolution / 4.0) + (params.resolution / 8.0) * sin(n * theta);
             if r <= star_r {
                 return 1.0;
             } else {
@@ -30,9 +35,9 @@ fn isInside(x: f32, y: f32, selector: i32) -> f32 {
         }
         case 2: {
             // Função 2: Infinito
-            var a: f32 = resolution / 4.0;
-            var left = (xp * xp + yp * yp) * (xp * xp + yp * yp);
-            var right = 2.0 * a * a * (xp * xp - yp * yp);
+            let a: f32 = params.resolution / 4.0;
+            let left = (xp * xp + yp * yp) * (xp * xp + yp * yp);
+            let right = 2.0 * a * a * (xp * xp - yp * yp);
             if left <= right {
                 return 1.0;
             } else {
@@ -41,8 +46,8 @@ fn isInside(x: f32, y: f32, selector: i32) -> f32 {
         }
         case 3: {
             // Função 3: Círculo
-            var rCircle: f32 = resolution / 2.0 - 100.0;
-            var fCircle = pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCircle, 2.0);
+            let rCircle: f32 = params.resolution / 2.0 - 100.0;
+            let fCircle = pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCircle, 2.0);
             if fCircle <= 0.0 {
                 return 1.0;
             } else {
@@ -51,9 +56,9 @@ fn isInside(x: f32, y: f32, selector: i32) -> f32 {
         }
         case 4: {
             // Função 4: Coração
-            var xpHeart = (x - xc) / (resolution / 3.0);
-            var ypHeart = (y - yc) / (resolution / 3.0);
-            var fHeart = pow(xpHeart * xpHeart + ypHeart * ypHeart - 1.0, 3.0) - xpHeart * xpHeart * pow(ypHeart, 3.0);
+            let xpHeart = (x - xc) / (params.resolution / 3.0);
+            let ypHeart = (y - yc) / (params.resolution / 3.0);
+            let fHeart = pow(xpHeart * xpHeart + ypHeart * ypHeart - 1.0, 3.0) - xpHeart * xpHeart * pow(ypHeart, 3.0);
             if fHeart <= 0.0 {
                 return 1.0;
             } else {
@@ -69,30 +74,27 @@ fn isInside(x: f32, y: f32, selector: i32) -> f32 {
 
     @group(0) @binding(0) var<storage> pointRead: array<vec2<f32>>;
     @group(0) @binding(1) var<storage,read_write> point: array<vec2<f32>>;
+    // @group(0) @binding(2) var<uniform> params: Params;
+    @group(0) @binding(2) var<uniform> params: Params;
 
 
     @compute @workgroup_size(8,8)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let resolution: f32 = 512;
-    let gridSize: f32 = resolution / 4;
-    let sideLength: f32 = resolution / gridSize;
-    var shape: i32 = 3;
+    let row: u32 = global_id.x;
+    let col: u32 = global_id.y;
+    let x: f32 = f32(row) * params.sideLength;
+    let y: f32 = f32(col) * params.sideLength;
 
-    var row: u32 = global_id.x;
-    var col: u32 = global_id.y;
-    var x: f32 = f32(row) * sideLength;
-    var y: f32 = f32(col) * sideLength;
+    let pos: u32 = row * u32(params.gridSize) + col;
+    let nulo = vec2<f32>(0.0, 0.0);
 
-    var pos: u32 = row * u32(gridSize) + col;
-    const nulo = vec2<f32>(0.0, 0.0);
-
-    var a = vec2<f32>(x + sideLength * 0.5, y);
-    var b = vec2<f32>(x + sideLength, y + sideLength * 0.5);
-    var c = vec2<f32>(x + sideLength * 0.5, y + sideLength);
-    var d = vec2<f32>(x, y + sideLength * 0.5);
+    let a = vec2<f32>(x + params.sideLength * 0.5, y);
+    let b = vec2<f32>(x + params.sideLength, y + params.sideLength * 0.5);
+    let c = vec2<f32>(x + params.sideLength * 0.5, y + params.sideLength);
+    let d = vec2<f32>(x, y + params.sideLength * 0.5);
 
 
-    var state: f32 = getState(isInside(x, y, shape), isInside(x + sideLength, y, shape), isInside(x + sideLength, y + sideLength, shape), isInside(x, y + sideLength, shape));
+    let state: f32 = getState(isInside(x, y, params.shape), isInside(x + params.sideLength, y, params.shape), isInside(x + params.sideLength, y + params.sideLength, params.shape), isInside(x, y + params.sideLength, params.shape));
 
     switch (u32(state)) {
         case 1,14: {
