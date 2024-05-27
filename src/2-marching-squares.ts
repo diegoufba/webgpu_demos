@@ -30,11 +30,16 @@ async function main() {
     })
     //*********************************************************************************************************
 
-    let width: number = 1024
-    let height: number = 1024
+    // let width: number = 1024
+    // let height: number = 1024
+
+    let width: number = canvas.clientWidth;
+    let height: number = canvas.clientHeight;
+    canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
+    canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+
 
     let resolution: number = (width < height) ? width : height // pixels resolution x resolution
-    resolution = width/1.5
     let gridSize: number = Math.floor(resolution / 4) // grid = gridSize x gridSize
     let sideLength: number = resolution / gridSize //square side lenght
     let shape: number = 1
@@ -53,6 +58,17 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
     device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
+
+    function updateParamsBuffer() {
+        resolution = (width < height) ? width : height // pixels resolution x resolution
+        console.log(resolution)
+        sideLength = resolution / gridSize //square side lenght
+        paramsUint32View[0] = shape
+        paramsUint32View[1] = gridSize
+        paramsFloat32View[2] = resolution
+        paramsFloat32View[3] = sideLength
+        device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
+    }
 
     const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
         label: 'Bind Group Layout',
@@ -132,8 +148,6 @@ async function main() {
         ]
     }
 
-    createPointsBuffer()
-
     const pipelineLayout = device.createPipelineLayout({
         label: 'Pipeline Layout',
         bindGroupLayouts: [bindGroupLayout],
@@ -177,7 +191,8 @@ async function main() {
         }
     })
 
-    async function render() {
+    function render() {
+        createPointsBuffer()
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
 
         const computePass = encoder.beginComputePass()
@@ -230,19 +245,13 @@ async function main() {
 
     gui.add(options, "shape", shapes).onFinishChange((value: Shape) => {
         shape = shapeMap[value];
-        paramsUint32View[0] = shape
-        device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
-        createPointsBuffer()
+        updateParamsBuffer()
         render()
     });
 
     gui.add(options, "gridSize", 10, Math.floor(resolution), 10).onFinishChange((value) => {
         gridSize = value;
-        sideLength = resolution / gridSize;
-        paramsUint32View[1] = gridSize
-        paramsFloat32View[3] = sideLength
-        device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
-        createPointsBuffer()
+        updateParamsBuffer()
         render()
     });
 
