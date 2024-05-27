@@ -37,22 +37,20 @@ async function main() {
     let sideLength: number = resolution / gridSize //square side lenght
     let shape: number = 1
 
-    const lines = new Float32Array(gridSize * gridSize * 4 * 3)
+    const lines = new Float32Array(gridSize * gridSize * 4 * 2)
 
     const linesBuffer: GPUBuffer[] = [
         device.createBuffer({
             label: 'Lines vertices A',
             size: lines.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST ,
         }),
         device.createBuffer({
             label: 'Lines vertices B',
             size: lines.byteLength,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST ,
         })
     ]
-
-    device.queue.writeBuffer(linesBuffer[0], 0, lines)
 
     const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
         label: 'Bind Group Layout',
@@ -128,8 +126,7 @@ async function main() {
             }]
         },
         primitive: {
-            // topology: 'line-list'
-            topology: 'point-list'
+            topology: 'line-list'
         }
     })
 
@@ -149,19 +146,8 @@ async function main() {
         computePass.setPipeline(simulationPipeline)
         computePass.setBindGroup(0, bindGroup[0])
         const worgroupCount: number = gridSize
-        // const worgroupCount: number = 1
-        computePass.dispatchWorkgroups(worgroupCount, worgroupCount)
+        computePass.dispatchWorkgroups(worgroupCount/8, worgroupCount/8)
         computePass.end()
-
-        const copy: GPUBuffer = device.createBuffer({
-            label: 'Lines vertices',
-            size: lines.byteLength,
-            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-        })
-
-        encoder.copyBufferToBuffer(linesBuffer[1], 0, copy, 0, linesBuffer[0].size)
-
-
 
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -169,7 +155,6 @@ async function main() {
                 view: textureView,
                 loadOp: 'clear',
                 clearValue: { r: 0.2, g: 0.2, b: 0.298, a: 1 },
-                // clearValue: { r: 1, g: 1, b: 1, a: 1 },
                 storeOp: 'store'
             }]
         }
@@ -177,50 +162,9 @@ async function main() {
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
         renderPass.setBindGroup(0, bindGroup[1])
-        renderPass.draw(lines.length / 3)
+        renderPass.draw(lines.length / 2)
         renderPass.end()
         device.queue.submit([encoder.finish()])
-
-        function countNonZeroValues(floatArray: Float32Array) {
-            let count = 0;
-            for (let i = 0; i < floatArray.length; i++) {
-                if (floatArray[i] !== 0) {
-                    count++;
-                }
-            }
-            return count;
-        }
-
-        await Promise.all([
-            copy.mapAsync(GPUMapMode.READ),
-        ]);
-
-        const workgroup = new Float32Array(copy.getMappedRange());
-
-        const lines2 = []
-
-        for (let i = 0; i < workgroup.length - 6; i = i + 6) {
-            if (
-                workgroup[i] === 0 &&
-                workgroup[i + 1] === 0 &&
-                workgroup[i + 2] === 0 &&
-                workgroup[i + 3] === 0 &&
-                workgroup[i + 4] === 0 &&
-                workgroup[i + 5] === 0
-            ) {
-                continue
-            }
-            lines2.push(
-                [
-                    workgroup[i], workgroup[i + 1], workgroup[i + 2],
-                    workgroup[i + 3], workgroup[i + 4], workgroup[i + 5],
-                ]
-            )
-        }
-        // console.log(lines2)
-
-        // console.log(countNonZeroValues(workgroup))
-        console.log(workgroup)
     }
 
     render()

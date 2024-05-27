@@ -1,15 +1,4 @@
-struct Point {
-    x: f32,
-    y: f32,
-    z: f32,
-};
 
-struct Points {
-    p1: Point,
-    p2: Point,
-    p3: Point,
-    p4: Point,
-};
 
 fn getState(a: f32, b: f32, c: f32, d: f32) -> f32 {
     return a * 8 + b * 4 + c * 2 + d;
@@ -78,11 +67,11 @@ fn isInside(x: f32, y: f32, selector: i32) -> f32 {
     }
 }
 
-    @group(0) @binding(0) var<storage> linesIn: array<Points>;
-    @group(0) @binding(1) var<storage,read_write> linesOut: array<Points>;
+    @group(0) @binding(0) var<storage> pointRead: array<vec2<f32>>;
+    @group(0) @binding(1) var<storage,read_write> point: array<vec2<f32>>;
 
 
-    @compute @workgroup_size(1, 1, 1)
+    @compute @workgroup_size(8,8)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let resolution: f32 = 512;
     let gridSize: f32 = resolution / 4;
@@ -95,49 +84,70 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var y: f32 = f32(col) * sideLength;
 
     var pos: u32 = row * u32(gridSize) + col;
+    const nulo = vec2<f32>(0.0, 0.0);
 
-    const nulo = Point(0., 0., 0.);
-
-    var a = Point(x + sideLength * 0.5, y, 0.);
-    var b = Point(x + sideLength, y + sideLength * 0.5, 0.);
-    var c = Point(x + sideLength * 0.5, y + sideLength, 0.);
-    var d = Point(x, y + sideLength * 0.5, 0.);
+    var a = vec2<f32>(x + sideLength * 0.5, y);
+    var b = vec2<f32>(x + sideLength, y + sideLength * 0.5);
+    var c = vec2<f32>(x + sideLength * 0.5, y + sideLength);
+    var d = vec2<f32>(x, y + sideLength * 0.5);
 
 
     var state: f32 = getState(isInside(x, y, shape), isInside(x + sideLength, y, shape), isInside(x + sideLength, y + sideLength, shape), isInside(x, y + sideLength, shape));
 
     switch (u32(state)) {
         case 1,14: {
-            linesOut[pos] = Points(c, d, nulo, nulo) ;
+            point[pos * 4 + 0] = c;
+            point[pos * 4 + 1] = d;
+            point[pos * 4 + 2] = nulo;
+            point[pos * 4 + 3] = nulo;
         }
         case 2,13: {
-            linesOut[pos] = Points(b, c, nulo, nulo) ;
+            point[pos * 4 + 0] = b;
+            point[pos * 4 + 1] = c;
+            point[pos * 4 + 2] = nulo;
+            point[pos * 4 + 3] = nulo;
         }
         case 3,12: {
-            linesOut[pos] = Points(b, d, nulo, nulo) ;
+            point[pos * 4 + 0] = b;
+            point[pos * 4 + 1] = d;
+            point[pos * 4 + 2] = nulo;
+            point[pos * 4 + 3] = nulo;
         }
         case 4,11: {
-            linesOut[pos] = Points(a, b, nulo, nulo) ;
+            point[pos * 4 + 0] = a;
+            point[pos * 4 + 1] = b;
+            point[pos * 4 + 2] = nulo;
+            point[pos * 4 + 3] = nulo;
         }
         case 5: {
-            linesOut[pos] = Points(a, d, b, c) ;
+            point[pos * 4 + 0] = a;
+            point[pos * 4 + 1] = d;
+            point[pos * 4 + 2] = b;
+            point[pos * 4 + 3] = c;
         }
         case 6,9: {
-            linesOut[pos] = Points(a, c, nulo, nulo) ;
+            point[pos * 4 + 0] = a;
+            point[pos * 4 + 1] = c;
+            point[pos * 4 + 2] = nulo;
+            point[pos * 4 + 3] = nulo;
         }
         case 7,8: {
-            linesOut[pos] = Points(a, d, nulo, nulo) ;
+            point[pos * 4 + 0] = a;
+            point[pos * 4 + 1] = d;
+            point[pos * 4 + 2] = nulo;
+            point[pos * 4 + 3] = nulo;
         }
         case 10: {
-            linesOut[pos] = Points(a, b, c, d) ;
+            point[pos * 4 + 0] = a;
+            point[pos * 4 + 1] = b;
+            point[pos * 4 + 2] = c;
+            point[pos * 4 + 3] = d;
         }
         default: {
-            linesOut[pos] = Points(nulo, nulo, nulo, nulo) ;
+            point[pos * 4 + 0] = nulo;
+            point[pos * 4 + 1] = nulo;
+            point[pos * 4 + 2] = nulo;
+            point[pos * 4 + 3] = nulo;
         }
     }
-    // let p1: Point = Point(-0.8,-0.8,0);
-    // let p2: Point = Point(0.8,-0.8,0);
-    // let p3: Point = Point(-0.8,0.8,0);
-    // let p4: Point = Point(0.8,0.8,0);
-    // linesOut[pos] = Points(p1,p2,p3,p4);
 }
