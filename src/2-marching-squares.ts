@@ -32,14 +32,13 @@ async function main() {
 
     // let width: number = 1024
     // let height: number = 1024
+    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
+    let width: number = canvasContainer.clientWidth;
+    let height: number = canvasContainer.clientHeight;
+    let resolution: number = Math.min(width, height) // pixels resolution x resolution
+    canvas.width = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
+    canvas.height = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
 
-    let width: number = canvas.clientWidth;
-    let height: number = canvas.clientHeight;
-    canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
-    canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
-
-
-    let resolution: number = (width < height) ? width : height // pixels resolution x resolution
     let gridSize: number = Math.floor(resolution / 4) // grid = gridSize x gridSize
     let sideLength: number = resolution / gridSize //square side lenght
     let shape: number = 1
@@ -60,8 +59,7 @@ async function main() {
     device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
 
     function updateParamsBuffer() {
-        resolution = (width < height) ? width : height // pixels resolution x resolution
-        console.log(resolution)
+        // resolution = Math.min(width, height) // pixels resolution x resolution
         sideLength = resolution / gridSize //square side lenght
         paramsUint32View[0] = shape
         paramsUint32View[1] = gridSize
