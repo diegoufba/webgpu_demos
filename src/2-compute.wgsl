@@ -12,9 +12,6 @@ fn getState(a: f32, b: f32, c: f32, d: f32) -> f32 {
 fn isInside(x: f32, y: f32, selector: u32) -> f32 {
     var xc: f32 = params.resolution / 2.0;
     var yc: f32 = params.resolution / 2.0;
-    // let resolution: f32 = 512;
-    // let xc: f32 = resolution / 2.0;
-    // let yc: f32 = resolution / 2.0;
 
     // Variáveis comuns para algumas das funções
     let xp = x - xc;
