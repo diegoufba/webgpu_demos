@@ -177,6 +177,7 @@ async function main() {
         },
         primitive: {
             topology: 'line-list'
+            // topology: 'point-list'
         }
     })
 
