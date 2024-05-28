@@ -28,7 +28,5 @@ fn vertexMain(@location(0) pos: vec3f) -> @builtin(position) vec4f {
 
 @fragment
 fn fragmentMain() -> @location(0) vec4f {
-    // return vec4f(0.5, 0.5, 0.5, 1.0);
-    return vec4f(0.0667, 0.6824, 0.7333, 1.0);
-    // return vec4f(1.0, 1.0, 1.0, 1.0);
+    return vec4f(1.0, 1.0, 1.0, 1.0);
 }

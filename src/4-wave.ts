@@ -31,7 +31,7 @@ async function main() {
     })
 
     // const vertices = cubeVertexArray
-    const size = 50
+    const size = 100
     const vertices = generatePlane(size * size)
     // console.log(vertices)
 
@@ -88,7 +88,7 @@ async function main() {
 
     device.queue.writeBuffer(uniformBuffer, 0, uniformBufferArray)
 
-    const paramsBufferArray = new Float32Array([1, 3, 1, 1])
+    const paramsBufferArray = new Float32Array([1, 4, 4, 1])
 
     const paramsBufferBuffer: GPUBuffer = device.createBuffer({
         label: 'Uniform buffer',
@@ -153,15 +153,18 @@ async function main() {
         },
         primitive: {
             // topology: 'line-list'
-            topology: 'triangle-list'
+            // topology: 'triangle-list'
+            topology: 'point-list'
+            // topology: 'line-strip'
         }
     })
 
+    const initialTime = Date.now()
     let time = 0
-    let increment = 10/1000
+    let speed = 2/1000
     function render() {
 
-        time = time + increment
+        time = (Date.now() - initialTime) * speed
         paramsBufferArray[0] = time
         device.queue.writeBuffer(paramsBufferBuffer, 0, paramsBufferArray)
         // console.log(time)
@@ -195,13 +198,13 @@ async function main() {
     gui.domElement.style.marginTop = "100px";
     gui.domElement.id = "datGUI";
     var options = {
-        speed: 10,
-        kx: 3,
-        ky: 1,
+        speed: 2,
+        kx: 4,
+        ky: 4,
         height: 1
     }
-    gui.add(options, "speed", 0, 20).onChange(function (value) {
-        increment = value / 1000
+    gui.add(options, "speed", 0, 10).onChange(function (value) {
+        speed = value / 1000
     });
     gui.add(options, "kx", 0, 10).onChange(function (value) {
         paramsBufferArray[1] = value
