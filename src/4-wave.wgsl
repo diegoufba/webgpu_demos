@@ -11,22 +11,40 @@ struct Params {
     height: f32
 }
 
+struct VertexInput {
+    @location(0) pos: vec2f,
+    @location(1) uv: vec2f
+}
+
+struct VertexOutput {
+    @builtin(position) pos: vec4f,
+    @location(0) uv: vec2f
+}
+
 @group(0) @binding(0) var<uniform> transformUBO: TransformData;
 @group(0) @binding(1) var<uniform> params: Params;
 
 @vertex
-fn vertexMain(@location(0) pos: vec3f) -> @builtin(position) vec4f {
+fn vertexMain(input: VertexInput) -> VertexOutput {
 
-    var x: f32 = sin(pos.x * params.kx + params.time);
-    var y: f32 = cos(pos.y * params.ky + params.time);
+    var x: f32 = sin(input.pos.x * params.kx + params.time);
+    var y: f32 = cos(input.pos.y * params.ky + params.time);
     var z: f32 = ((x + y) * params.height) / 10;
 
-    let position = transformUBO.projection * transformUBO.view * transformUBO.model * vec4f(pos.x, pos.y, z, 1.0);
-    // return vec4f(pos,1.0);
-    return vec4f(position);
+    let position: vec4f = transformUBO.projection * transformUBO.view * transformUBO.model * vec4f(input.pos.x, input.pos.y, z, 1.0);
+
+    var output: VertexOutput;
+    output.pos = position;
+    output.uv = input.uv;
+
+    return output;
 }
 
+@group(0) @binding(2) var mySample: sampler;
+@group(0) @binding(3) var myTexture: texture_2d<f32>;
+
 @fragment
-fn fragmentMain() -> @location(0) vec4f {
-    return vec4f(1.0, 1.0, 1.0, 1.0);
+fn fragmentMain(fragInput: VertexOutput) -> @location(0) vec4f {
+    // return vec4f(1.0, 1.0, 1.0, 1.0);
+    return textureSample(myTexture, mySample, fragInput.uv);
 }

@@ -30,6 +30,30 @@ async function main() {
         format: canvasFormat
     })
 
+    async function loadImageBitmap(url: string) {
+        const res = await fetch(url)
+        const blob = await res.blob()
+        return await createImageBitmap(blob, { colorSpaceConversion: 'none' })
+    }
+
+    const url = "../public/waveTexture.jpg"
+    const source = await loadImageBitmap(url)
+
+    const texture = device.createTexture({
+        label: url,
+        format: 'rgba8unorm',
+        size: [source.width, source.height],
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+    })
+
+    device.queue.copyExternalImageToTexture(
+        { source },
+        // { source, flipY: true },
+        { texture },
+        { width: source.width, height: source.height }
+    )
+    const sampler = device.createSampler()
+
     // const vertices = cubeVertexArray
     const size = 100
     const vertices = generatePlane(size * size)
@@ -45,12 +69,18 @@ async function main() {
     device.queue.writeBuffer(vertexBuffer, 0, vertices)
 
     const vertexBufferLayout: GPUVertexBufferLayout = {
-        arrayStride: 12,
+        arrayStride: 16,
         attributes: [{
-            format: "float32x3",
+            format: "float32x2",
             offset: 0,
             shaderLocation: 0,
-        }]
+        },
+        {
+            format: "float32x2",
+            offset: 8,
+            shaderLocation: 1,
+        }
+        ]
     }
 
     function toRadians(degrees: number) {
@@ -110,6 +140,16 @@ async function main() {
             visibility: GPUShaderStage.VERTEX,
             buffer: { type: 'uniform' }
         },
+        {
+            binding: 2,
+            visibility: GPUShaderStage.FRAGMENT,
+            sampler: {}
+        },
+        {
+            binding: 3,
+            visibility: GPUShaderStage.FRAGMENT,
+            texture: {}
+        },
         ]
     })
 
@@ -122,7 +162,14 @@ async function main() {
         }, {
             binding: 1,
             resource: { buffer: paramsBufferBuffer }
-        }]
+        }, {
+            binding: 2,
+            resource: sampler
+        }, {
+            binding: 3,
+            resource: texture.createView()
+        },
+        ]
     })
 
     const pipelineLayout = device.createPipelineLayout({
@@ -153,15 +200,15 @@ async function main() {
         },
         primitive: {
             // topology: 'line-list'
-            // topology: 'triangle-list'
-            topology: 'point-list'
+            topology: 'triangle-list'
+            // topology: 'point-list'
             // topology: 'line-strip'
         }
     })
 
     const initialTime = Date.now()
     let time = 0
-    let speed = 2/1000
+    let speed = 2 / 1000
     function render() {
 
         time = (Date.now() - initialTime) * speed
@@ -183,7 +230,7 @@ async function main() {
         pass.setPipeline(trianglePipeline)
         pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
-        pass.draw(vertices.length / 3)
+        pass.draw(vertices.length / 4)
         pass.end()
         device.queue.submit([encoder.finish()])
     }

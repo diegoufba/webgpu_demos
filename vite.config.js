@@ -21,4 +21,17 @@ export default defineConfig({
       },
     },
   },
+  plugins: [
+    {
+      name: 'vite-plugin-wgsl',
+      transform(src, id) {
+        if (id.endsWith('.wgsl')) {
+          return {
+            code: `export default ${JSON.stringify(src)};`,
+            map: null
+          };
+        }
+      }
+    }
+  ]
 });
