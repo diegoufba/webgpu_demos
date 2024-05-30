@@ -32,7 +32,7 @@ async function main() {
     const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
     let width: number = canvasContainer.clientWidth;
     let height: number = canvasContainer.clientHeight;
-    let resolution: number = Math.min(width, height) // pixels resolution x resolution
+    // let resolution: number = Math.min(width, height) // pixels resolution x resolution
     canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
     canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
 
