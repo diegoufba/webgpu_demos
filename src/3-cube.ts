@@ -1,6 +1,6 @@
 import { mat4, vec3 } from 'wgpu-matrix';
 import triangle from './3-cube.wgsl'
-import { cubeVertexArray } from './solids/cube'
+import { cubeVertexArray } from './meshes/cube'
 // import { mat4, vec3 } from 'gl-matrix'
 
 

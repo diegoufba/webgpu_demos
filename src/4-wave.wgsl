@@ -32,6 +32,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var z: f32 = ((x + y) * params.height) / 10;
 
     let position: vec4f = transformUBO.projection * transformUBO.view * transformUBO.model * vec4f(input.pos.x, input.pos.y, z, 1.0);
+    // let position: vec4f = transformUBO.projection * transformUBO.view * transformUBO.model * vec4f(input.pos,0.0, 1.0);
 
     var output: VertexOutput;
     output.pos = position;

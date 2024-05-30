@@ -1,6 +1,6 @@
 import { mat4, vec3 } from 'wgpu-matrix';
 import wave from './4-wave.wgsl?raw'
-import { generatePlane } from './solids/cube'
+import { createPlane } from './meshes/plane'
 import * as dat from 'dat.gui';
 // import { mat4, vec3 } from 'gl-matrix'
 
@@ -52,12 +52,15 @@ async function main() {
         { texture },
         { width: source.width, height: source.height }
     )
-    const sampler = device.createSampler()
+    const sampler = device.createSampler({
+        magFilter: 'nearest',
+        // magFilter:'linear',
+        // addressModeU: 'repeat',
+        // addressModeV: 'repeat'
+    })
 
-    // const vertices = cubeVertexArray
     const size = 100
-    const vertices = generatePlane(size * size)
-    // console.log(vertices)
+    const vertices = createPlane(size,size,2)
 
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
@@ -101,7 +104,7 @@ async function main() {
     let model = mat4.identity()
     let rotation = toRadians(60)
     model = mat4.rotateX(model, rotation)
-    model = mat4.scale(model, [1.5, 1.5, 1.5])
+    // model = mat4.scale(model, [1.5, 1.5, 1.5])
     // model = mat4.rotateZ(model, rotation)
 
     const uniformBufferArray = new Float32Array(4 * 4 * 3)
@@ -199,8 +202,8 @@ async function main() {
             }]
         },
         primitive: {
-            // topology: 'line-list'
             topology: 'triangle-list'
+            // topology: 'line-list'
             // topology: 'point-list'
             // topology: 'line-strip'
         }

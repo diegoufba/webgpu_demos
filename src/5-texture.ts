@@ -72,7 +72,7 @@ async function main() {
         return await createImageBitmap(blob, { colorSpaceConversion: 'none' })
     }
 
-    const url = "../public/waveTexture.jpg"
+    const url = "/webgpu_demos/waveTexture.jpg"
     const source = await loadImageBitmap(url)
 
     const texture = device.createTexture({
