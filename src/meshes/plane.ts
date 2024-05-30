@@ -44,6 +44,24 @@ export const createPlane = (
                 xt3, yt3, u3, v3,
                 xt2, yt2, u2, v2,
             );
+
+            // // Wireframe
+            // vertices.push(
+            //     xt0, yt0, u0, v0,
+            //     xt2, yt2, u2, v2,
+
+            //     xt2, yt2, u2, v2,
+            //     xt3, yt3, u3, v3,
+
+            //     xt3, yt3, u3, v3,
+            //     xt1, yt1, u1, v1,
+
+            //     xt1, yt1, u1, v1,
+            //     xt0, yt0, u0, v0,
+
+            //     xt0, yt0, u0, v0,
+            //     xt3, yt3, u3, v3,
+            // );
         }
     }
 

@@ -1,13 +1,41 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="style.css">
     <title>Cube</title>
-  </head>
-  <body>
-    <canvas width="512" height="512" id="renderCanvas"></canvas>
+</head>
+
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-item">
+                <a href="/"><img src="/triangle.png"></a>
+                <h2>Triangle</h2>
+            </div>
+            <div class="sidebar-item">
+                <a href="./2-marching-squares.html"><img src="/marching_squares.png"></a>
+                <h2>Marching Squares</h2>
+            </div>
+            <div class="sidebar-item">
+                <a href="./3-cube.html"><img src="/cube.png"></a>
+                <h2>Cube</h2>
+            </div>
+            <div class="sidebar-item">
+                <a href="./4-wave.html"><img src="/wave.png"></a>
+                <h2>Wave</h2>
+            </div>
+        </div>
+        <div class="content">
+            <h1>Demostrações em WebGPU</h1>
+            <div id="canvasContainer">
+                <canvas id="renderCanvas"></canvas>
+            </div>
+        </div>
+    </div>
     <script type="module" src="./3-cube.ts"></script>
-  </body>
+</body>
+
 </html>

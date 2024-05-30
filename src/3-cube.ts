@@ -29,6 +29,13 @@ async function main() {
         format: canvasFormat
     })
 
+    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
+    let width: number = canvasContainer.clientWidth;
+    let height: number = canvasContainer.clientHeight;
+    let resolution: number = Math.min(width, height) // pixels resolution x resolution
+    canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
+    canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+
     // const vertices = new Float32Array([
     //     0.0, 0.5, 0.0,
     //     -0.5, -0.5, 0.0,
@@ -60,9 +67,10 @@ async function main() {
     }
 
     const fovy = toRadians(45)
-    const aspectRatio = 512 / 512
+    const aspectRatio = width / height
+    // const aspectRatio = 512 / 512
     const nearPlane = 0.1
-    const farPlane = 10
+    const farPlane = 100
     const projection = mat4.perspective(fovy, aspectRatio, nearPlane, farPlane)
 
     const eye = vec3.fromValues(0, 0, -5)

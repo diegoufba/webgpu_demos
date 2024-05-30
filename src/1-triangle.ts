@@ -25,6 +25,13 @@ async function main() {
         format: canvasFormat
     })
 
+    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
+    let width: number = canvasContainer.clientWidth;
+    let height: number = canvasContainer.clientHeight;
+    let resolution: number = Math.min(width, height) // pixels resolution x resolution
+    canvas.width = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
+    canvas.height = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
+
 
     const vertices = new Float32Array([
         -0.8, -0.8,

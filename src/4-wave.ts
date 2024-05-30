@@ -1,5 +1,5 @@
 import { mat4, vec3 } from 'wgpu-matrix';
-import wave from './4-wave.wgsl?raw'
+import wave from './4-wave.wgsl'
 import { createPlane } from './meshes/plane'
 import * as dat from 'dat.gui';
 // import { mat4, vec3 } from 'gl-matrix'
@@ -29,6 +29,13 @@ async function main() {
         device,
         format: canvasFormat
     })
+
+    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
+    let width: number = canvasContainer.clientWidth;
+    let height: number = canvasContainer.clientHeight;
+    let resolution: number = Math.min(width, height) // pixels resolution x resolution
+    canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
+    canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
 
     async function loadImageBitmap(url: string) {
         const res = await fetch(url)
@@ -82,7 +89,7 @@ async function main() {
             format: "float32x2",
             offset: 8,
             shaderLocation: 1,
-        }
+        },
         ]
     }
 
@@ -91,7 +98,7 @@ async function main() {
     }
 
     const fovy = toRadians(45)
-    const aspectRatio = 1024 / 1024
+    const aspectRatio = width / height
     const nearPlane = 0.1
     const farPlane = 10
     const projection = mat4.perspective(fovy, aspectRatio, nearPlane, farPlane)
@@ -205,7 +212,6 @@ async function main() {
             topology: 'triangle-list'
             // topology: 'line-list'
             // topology: 'point-list'
-            // topology: 'line-strip'
         }
     })
 

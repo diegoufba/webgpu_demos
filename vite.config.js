@@ -12,11 +12,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: './index.html',
-        triangle: './src/1-triangle.html',
         marching_squares: './src/2-marching-squares.html',
         cube: './src/3-cube.html',
         wave: './src/4-wave.html',
-        texture: './src/5-texture.html',
         // Outros pontos de entrada, se houver.
         // página2: './pagina2.html',
       },
