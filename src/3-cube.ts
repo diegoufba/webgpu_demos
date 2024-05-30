@@ -35,6 +35,8 @@ async function main() {
     // let resolution: number = Math.min(width, height) // pixels resolution x resolution
     canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
     canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+    console.log(`Canvas Container height: ${canvasContainer.clientHeight}`)
+    console.log(`Canvas height: ${canvas.clientHeight}`)
 
     // const vertices = new Float32Array([
     //     0.0, 0.5, 0.0,
