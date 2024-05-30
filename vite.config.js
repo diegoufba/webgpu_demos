@@ -16,6 +16,7 @@ export default defineConfig({
         marching_squares: './src/2-marching-squares.html',
         cube: './src/3-cube.html',
         wave: './src/4-wave.html',
+        texture: './src/5-texture.html',
         // Outros pontos de entrada, se houver.
         // página2: './pagina2.html',
       },
