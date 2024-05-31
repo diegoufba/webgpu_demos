@@ -1,74 +1,55 @@
-import { mat4, vec3 } from 'wgpu-matrix';
+import { mat4 } from 'wgpu-matrix';
 import wave from './4-wave.wgsl'
 import { createPlane } from './meshes/plane'
+import { getMatrixProjection, getMatrixView, toRadians } from './utils/matrix'
+import { getTexture, setupResizeObserver } from './utils/utils'
+import { initializeWebGPU } from './utils/webgpuInit'
 import * as dat from 'dat.gui';
-// import { mat4, vec3 } from 'gl-matrix'
 
 
 async function main() {
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 
-    if (!navigator.gpu) {
-        throw new Error("WebGPU not supported on this browser.")
-    }
+    const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
-    const adpater = await navigator.gpu.requestAdapter()
-    if (!adpater) {
-        throw new Error("No appropriate GPUAdapter found.")
-    }
+    let matrixProjection = getMatrixProjection(aspectRatio)
+    let MatrixView = getMatrixView()
 
-    const device: GPUDevice = await adpater.requestDevice()
+    let matrixModel = mat4.identity()
+    matrixModel = mat4.rotateX(matrixModel, toRadians(60))
+    // model = mat4.scale(model, [1.5, 1.5, 1.5])
+    // model = mat4.rotateZ(model, rotation)
 
-    const context = canvas.getContext('webgpu')
-    if (!context) {
-        throw new Error("WebGPU context not available.");
-    }
+    //Set Uniform Buffer *****************************************************************************
+    const uniformBufferArray = new Float32Array(4 * 4 * 3)
 
-    const canvasFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat()
-    context.configure({
-        device,
-        format: canvasFormat
+    const uniformBuffer: GPUBuffer = device.createBuffer({
+        label: 'Uniform buffer',
+        size: uniformBufferArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
 
-    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
-    let width: number = canvasContainer.clientWidth;
-    let height: number = canvasContainer.clientHeight;
-    // let resolution: number = Math.min(width, height) // pixels resolution x resolution
-    canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
-    canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+    uniformBufferArray.set(matrixModel, 0)
+    uniformBufferArray.set(MatrixView, 16)
+    uniformBufferArray.set(matrixProjection, 32)
 
-    async function loadImageBitmap(url: string) {
-        const res = await fetch(url)
-        const blob = await res.blob()
-        return await createImageBitmap(blob, { colorSpaceConversion: 'none' })
-    }
+    device.queue.writeBuffer(uniformBuffer, 0, uniformBufferArray)
 
-    const url = "/webgpu_demos/waveTexture.jpg"
-    const source = await loadImageBitmap(url)
 
-    const texture = device.createTexture({
-        label: url,
-        format: 'rgba8unorm',
-        size: [source.width, source.height],
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+    const paramsBufferArray = new Float32Array([1, 4, 4, 1]) //time,kx,ky,height
+
+    const paramsBufferBuffer: GPUBuffer = device.createBuffer({
+        label: 'Uniform buffer',
+        size: paramsBufferArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
 
-    device.queue.copyExternalImageToTexture(
-        { source },
-        // { source, flipY: true },
-        { texture },
-        { width: source.width, height: source.height }
-    )
-    const sampler = device.createSampler({
-        magFilter: 'nearest',
-        // magFilter:'linear',
-        // addressModeU: 'repeat',
-        // addressModeV: 'repeat'
-    })
+    device.queue.writeBuffer(paramsBufferBuffer, 0, paramsBufferArray)
+    //************************************************************************************************
 
+    //Set Vertex Buffer ******************************************************************************
     const size = 100
-    const vertices = createPlane(size,size,2)
-
+    const vertices = createPlane(size, size, 2)
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
         label: 'Triangle vertices',
@@ -92,52 +73,15 @@ async function main() {
         },
         ]
     }
+    //************************************************************************************************
 
-    function toRadians(degrees: number) {
-        return degrees * (Math.PI / 180);
-    }
+    //Set Texture ************************************************************************************
+    const texture = await getTexture("/webgpu_demos/waveTexture.jpg", device)
 
-    const fovy = toRadians(45)
-    const aspectRatio = width / height
-    const nearPlane = 0.1
-    const farPlane = 10
-    const projection = mat4.perspective(fovy, aspectRatio, nearPlane, farPlane)
+    const sampler = device.createSampler()
+    //************************************************************************************************
 
-    const eye = vec3.fromValues(0, 0, -5)
-    const target = vec3.fromValues(0, 0, 0)
-    const up = vec3.fromValues(0, 1, 0)
-    const view = mat4.lookAt(eye, target, up)
-
-    let model = mat4.identity()
-    let rotation = toRadians(60)
-    model = mat4.rotateX(model, rotation)
-    // model = mat4.scale(model, [1.5, 1.5, 1.5])
-    // model = mat4.rotateZ(model, rotation)
-
-    const uniformBufferArray = new Float32Array(4 * 4 * 3)
-
-    const uniformBuffer: GPUBuffer = device.createBuffer({
-        label: 'Uniform buffer',
-        size: uniformBufferArray.byteLength,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-    })
-
-    uniformBufferArray.set(model, 0)
-    uniformBufferArray.set(view, 16)
-    uniformBufferArray.set(projection, 32)
-
-    device.queue.writeBuffer(uniformBuffer, 0, uniformBufferArray)
-
-    const paramsBufferArray = new Float32Array([1, 4, 4, 1])
-
-    const paramsBufferBuffer: GPUBuffer = device.createBuffer({
-        label: 'Uniform buffer',
-        size: paramsBufferArray.byteLength,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-    })
-
-    device.queue.writeBuffer(paramsBufferBuffer, 0, paramsBufferArray)
-
+    //Bind *******************************************************************************************
     const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
         label: 'Bind Group Layout',
         entries: [{
@@ -181,28 +125,29 @@ async function main() {
         },
         ]
     })
+    //************************************************************************************************
 
+    const shaderModule: GPUShaderModule = device.createShaderModule({
+        label: 'Shader',
+        code: wave
+    })
+
+    //Pipeline ****************************************************************************************
     const pipelineLayout = device.createPipelineLayout({
         label: 'Pipeline Layout',
         bindGroupLayouts: [bindGroupLayout],
     })
 
-
-    const triangleShaderModule: GPUShaderModule = device.createShaderModule({
-        label: 'Triangle shader',
-        code: wave
-    })
-
-    const trianglePipeline: GPURenderPipeline = device.createRenderPipeline({
+    const pipeline: GPURenderPipeline = device.createRenderPipeline({
         label: 'Triangle pipeline',
         layout: pipelineLayout,
         vertex: {
-            module: triangleShaderModule,
+            module: shaderModule,
             entryPoint: "vertexMain",
             buffers: [vertexBufferLayout]
         },
         fragment: {
-            module: triangleShaderModule,
+            module: shaderModule,
             entryPoint: 'fragmentMain',
             targets: [{
                 format: canvasFormat
@@ -214,11 +159,14 @@ async function main() {
             // topology: 'point-list'
         }
     })
+    //************************************************************************************************
 
     const initialTime = Date.now()
     let time = 0
     let speed = 2 / 1000
-    function render() {
+
+    // Render
+    const render = () => {
 
         time = (Date.now() - initialTime) * speed
         paramsBufferArray[0] = time
@@ -236,7 +184,7 @@ async function main() {
             }]
         }
         const pass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
-        pass.setPipeline(trianglePipeline)
+        pass.setPipeline(pipeline)
         pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
         pass.draw(vertices.length / 4)
@@ -250,6 +198,7 @@ async function main() {
     setInterval(render, UPDATE_INTERVAL);
     // window.requestAnimationFrame(render)
 
+    //Gui ********************************************************************************************
     var gui = new dat.GUI();
     gui.domElement.style.marginTop = "100px";
     gui.domElement.id = "datGUI";
@@ -274,6 +223,10 @@ async function main() {
         paramsBufferArray[3] = value
         device.queue.writeBuffer(paramsBufferBuffer, 0, paramsBufferArray)
     });
+    //************************************************************************************************
+
+    // resize screen
+    setupResizeObserver(canvas, device, uniformBuffer, uniformBufferArray, matrixProjection, getMatrixProjection, render);
 }
 
 main()
