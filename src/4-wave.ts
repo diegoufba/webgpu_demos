@@ -16,7 +16,7 @@ async function main() {
     let MatrixView = getMatrixView()
 
     let matrixModel = mat4.identity()
-    matrixModel = mat4.rotateX(matrixModel, toRadians(60))
+    matrixModel = mat4.rotateX(matrixModel, toRadians(-60))
     // model = mat4.scale(model, [1.5, 1.5, 1.5])
     // model = mat4.rotateZ(model, rotation)
 

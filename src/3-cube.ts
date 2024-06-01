@@ -19,7 +19,7 @@ async function main() {
 
     let rotation = toRadians(30)
     matrixModel = mat4.rotateX(matrixModel, rotation)
-    matrixModel = mat4.rotateZ(matrixModel, rotation)
+    matrixModel = mat4.rotateY(matrixModel, rotation)
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)

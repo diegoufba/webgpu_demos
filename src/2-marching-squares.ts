@@ -3,7 +3,7 @@ import shader from './2-shader.wgsl?raw'
 import * as dat from 'dat.gui';
 import { initializeWebGPU } from './utils/webgpuInit';
 import { getMatrixProjection, getMatrixView } from './utils/matrix';
-import { mat4 } from 'wgpu-matrix';
+import { mat4,vec3 } from 'wgpu-matrix';
 import { setupResizeObserver } from './utils/utils';
 
 async function main() {
@@ -16,6 +16,8 @@ async function main() {
     let MatrixView = getMatrixView()
 
     let matrixModel = mat4.identity()
+    matrixModel = mat4.scale(matrixModel,vec3.fromValues(2, 2, 1))
+    matrixModel = mat4.translate(matrixModel,vec3.fromValues(-1, -1, 0))
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)

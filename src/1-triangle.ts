@@ -1,3 +1,4 @@
+// import { mat4 } from 'wgpu-matrix'
 import { mat4 } from 'wgpu-matrix'
 import triangle from './1-triangle.wgsl?raw'
 import { getMatrixProjection, getMatrixView } from './utils/matrix'
@@ -13,6 +14,8 @@ async function main() {
     let MatrixView = getMatrixView()
 
     let matrixModel = mat4.identity()
+    // let matrixModel = mat4.create()
+    // mat4.identity(matrixModel)
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -28,17 +31,14 @@ async function main() {
     matrixBufferArray.set(matrixProjection, 32)
 
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
+
     //************************************************************************************************
 
 
     const vertices = new Float32Array([
-        -0.8, -0.8,
-        0.8, -0.8,
-        0.8, 0.8,
-
-    //     -0.8, -0.8, // Triangle 2 (Red)
-    //     0.8,  0.8,
-    //    -0.8,  0.8,
+        -0.8, -0.8, 
+        0.8, -0.8, 
+        0.8, 0.8, 
     ])
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
@@ -77,7 +77,11 @@ async function main() {
             targets: [{
                 format: canvasFormat
             }]
-        }
+        },
+        // primitive: {
+        //     topology: 'line-list'
+        //     // topology: 'point-list'
+        // }
     })
 
     const bindGroup: GPUBindGroup = device.createBindGroup({
