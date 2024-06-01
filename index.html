@@ -12,29 +12,28 @@
     <div class="container">
         <div class="sidebar">
             <div class="sidebar-item">
-                <a href="/webgpu_demos/"><img src="/triangle.png"></a>
+                <a href="./src/1-triangle.html" target="demos"><img src="/triangle.png"></a>
                 <h2>Triangle</h2>
             </div>
             <div class="sidebar-item">
-                <a href="./src/2-marching-squares.html"><img src="/marching_squares.png"></a>
+                <a href="./src/2-marching-squares.html" target="demos"><img src="/marching_squares.png"></a>
                 <h2>Marching Squares</h2>
             </div>
             <div class="sidebar-item">
-                <a href="./src/3-cube.html"><img src="/cube.png"></a>
+                <a href="./src/3-cube.html" target="demos"><img src="/cube.png"></a>
                 <h2>Cube</h2>
             </div>
 
             <div class="sidebar-item">
-                <a href="./src/4-wave.html"><img src="/wave.png"></a>
+                <a href="./src/4-wave.html" target="demos"><img src="/wave.png"></a>
                 <h2>Wave</h2>
             </div>
         </div>
         <div class="content">
             <h1>Demostrações em WebGPU</h1>
-            <canvas id="renderCanvas"></canvas>
+            <iframe name="demos" src="./src/1-triangle.html" frameborder="0"></iframe>
         </div>
     </div>
-    <script type="module" src="./src/1-triangle.ts"></script>
 </body>
 
 </html>

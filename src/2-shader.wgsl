@@ -17,4 +17,5 @@ fn vertexMain(@builtin(vertex_index) vertex: u32) -> @builtin(position) vec4f {
 @fragment
 fn fragmentMain() -> @location(0) vec4f {
     return vec4f(1, 1, 1, 1);
+    // return vec4f(1, 0, 0, 1);
 }

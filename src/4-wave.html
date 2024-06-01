@@ -1,39 +1,12 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="style.css">
-    <title>Wave</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./pages.css">
 </head>
-
 <body>
-    <div class="container">
-        <div class="sidebar">
-            <div class="sidebar-item">
-                <a href="/webgpu_demos/"><img src="/triangle.png"></a>
-                <h2>Triangle</h2>
-            </div>
-            <div class="sidebar-item">
-                <a href="./2-marching-squares.html"><img src="/marching_squares.png"></a>
-                <h2>Marching Squares</h2>
-            </div>
-            <div class="sidebar-item">
-                <a href="./3-cube.html"><img src="/cube.png"></a>
-                <h2>Cube</h2>
-            </div>
-            <div class="sidebar-item">
-                <a href="./4-wave.html"><img src="/wave.png"></a>
-                <h2>Wave</h2>
-            </div>
-        </div>
-        <div class="content">
-            <h1>Demostrações em WebGPU</h1>
-            <canvas id="renderCanvas"></canvas>
-        </div>
-    </div>
+    <canvas id="renderCanvas"></canvas>
     <script type="module" src="./4-wave.ts"></script>
 </body>
-
 </html>

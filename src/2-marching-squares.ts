@@ -204,7 +204,7 @@ async function main() {
         const computePass = encoder.beginComputePass()
         computePass.setPipeline(simulationPipeline)
         computePass.setBindGroup(0, bindGroup[0])
-        computePass.dispatchWorkgroups(gridSize / 8, gridSize / 8)
+        computePass.dispatchWorkgroups(gridSize / 1, gridSize / 1)
         computePass.end()
 
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
@@ -213,6 +213,7 @@ async function main() {
                 view: textureView,
                 loadOp: 'clear',
                 clearValue: { r: 0.2, g: 0.2, b: 0.298, a: 1 },
+                // clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1 },
                 storeOp: 'store'
             }]
         }

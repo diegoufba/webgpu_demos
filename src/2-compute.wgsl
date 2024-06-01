@@ -74,21 +74,30 @@ fn isInside(x: f32, y: f32, selector: u32) -> f32 {
     @group(0) @binding(2) var<uniform> params: Params;
 
 
-    @compute @workgroup_size(8,8)
+    @compute @workgroup_size(1,1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let row: u32 = global_id.x;
     let col: u32 = global_id.y;
     let x: f32 = f32(row) * params.sideLength;
     let y: f32 = f32(col) * params.sideLength;
 
+
     let pos: u32 = row * u32(params.gridSize) + col;
     let nulo = vec2<f32>(0.0, 0.0);
 
-    let a = vec2<f32>(x + params.sideLength * 0.5, y);
-    let b = vec2<f32>(x + params.sideLength, y + params.sideLength * 0.5);
-    let c = vec2<f32>(x + params.sideLength * 0.5, y + params.sideLength);
-    let d = vec2<f32>(x, y + params.sideLength * 0.5);
+    var a: vec2<f32> = nulo;
+    var b: vec2<f32> = nulo;
+    var c: vec2<f32> = nulo;
+    var d: vec2<f32> = nulo;
 
+    let lastRowOrCol: bool = ((row == params.gridSize - 1) | (col == params.gridSize - 1));
+
+    if (!lastRowOrCol) {
+        a = vec2<f32>(x + params.sideLength * 0.5, y);
+        b = vec2<f32>(x + params.sideLength, y + params.sideLength * 0.5);
+        c = vec2<f32>(x + params.sideLength * 0.5, y + params.sideLength);
+        d = vec2<f32>(x, y + params.sideLength * 0.5);
+    }
 
     let state: f32 = getState(isInside(x, y, params.shape), isInside(x + params.sideLength, y, params.shape), isInside(x + params.sideLength, y + params.sideLength, params.shape), isInside(x, y + params.sideLength, params.shape));
 
