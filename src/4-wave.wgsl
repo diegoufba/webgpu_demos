@@ -1,4 +1,4 @@
-struct TransformData {
+struct TransformMatrix {
     model: mat4x4f,
     view: mat4x4f,
     projection: mat4x4f
@@ -21,7 +21,7 @@ struct VertexOutput {
     @location(0) uv: vec2f
 }
 
-@group(0) @binding(0) var<uniform> transformUBO: TransformData;
+@group(0) @binding(0) var<uniform> matrix: TransformMatrix ;
 @group(0) @binding(1) var<uniform> params: Params;
 
 @vertex
@@ -31,7 +31,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var y: f32 = cos(input.pos.y * params.ky + params.time);
     var z: f32 = ((x + y) * params.height) / 10;
 
-    let position: vec4f = transformUBO.projection * transformUBO.view * transformUBO.model * vec4f(input.pos.x, input.pos.y, z, 1.0);
+    let position: vec4f = matrix.projection * matrix.view * matrix.model * vec4f(input.pos.x, input.pos.y, z, 1.0);
     // let position: vec4f = transformUBO.projection * transformUBO.view * transformUBO.model * vec4f(input.pos,0.0, 1.0);
 
     var output: VertexOutput;

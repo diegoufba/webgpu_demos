@@ -1,42 +1,44 @@
+import { mat4 } from 'wgpu-matrix'
 import triangle from './1-triangle.wgsl?raw'
+import { getMatrixProjection, getMatrixView } from './utils/matrix'
+import { setupResizeObserver } from './utils/utils'
+import { initializeWebGPU } from './utils/webgpuInit'
 
 async function main() {
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 
-    if (!navigator.gpu) {
-        throw new Error("WebGPU not supported on this browser.")
-    }
+    const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
-    const adpater = await navigator.gpu.requestAdapter()
-    if (!adpater) {
-        throw new Error("No appropriate GPUAdapter found.")
-    }
+    let matrixProjection = getMatrixProjection(aspectRatio)
+    let MatrixView = getMatrixView()
 
-    const device: GPUDevice = await adpater.requestDevice()
+    let matrixModel = mat4.identity()
 
-    const context = canvas.getContext('webgpu')
-    if (!context) {
-        throw new Error("WebGPU context not available.");
-    }
+    //Set Uniform Buffer *****************************************************************************
+    const matrixBufferArray = new Float32Array(4 * 4 * 3)
 
-    const canvasFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat()
-    context.configure({
-        device,
-        format: canvasFormat
+    const matrixBuffer: GPUBuffer = device.createBuffer({
+        label: 'Uniform buffer',
+        size: matrixBufferArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
 
-    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
-    let width: number = canvasContainer.clientWidth;
-    let height: number = canvasContainer.clientHeight;
-    let resolution: number = Math.min(width, height) // pixels resolution x resolution
-    canvas.width = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
-    canvas.height = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
+    matrixBufferArray.set(matrixModel, 0)
+    matrixBufferArray.set(MatrixView, 16)
+    matrixBufferArray.set(matrixProjection, 32)
+
+    device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
+    //************************************************************************************************
 
 
     const vertices = new Float32Array([
         -0.8, -0.8,
         0.8, -0.8,
         0.8, 0.8,
+
+    //     -0.8, -0.8, // Triangle 2 (Red)
+    //     0.8,  0.8,
+    //    -0.8,  0.8,
     ])
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
@@ -78,6 +80,16 @@ async function main() {
         }
     })
 
+    const bindGroup: GPUBindGroup = device.createBindGroup({
+        label: 'Bind Group',
+        layout: trianglePipeline.getBindGroupLayout(0),
+        entries: [{
+            binding: 0,
+            resource: { buffer: matrixBuffer }
+        },
+        ]
+    })
+
     function render() {
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
@@ -91,6 +103,7 @@ async function main() {
         }
         const pass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         pass.setPipeline(trianglePipeline)
+        pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
         pass.draw(vertices.length / 2)
         pass.end()
@@ -98,6 +111,9 @@ async function main() {
     }
 
     render()
+
+    // resize screen
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, matrixProjection, getMatrixProjection, render);
 }
 
 main()

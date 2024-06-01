@@ -1,55 +1,48 @@
 import compute from './2-compute.wgsl?raw'
 import shader from './2-shader.wgsl?raw'
 import * as dat from 'dat.gui';
+import { initializeWebGPU } from './utils/webgpuInit';
+import { getMatrixProjection, getMatrixView } from './utils/matrix';
+import { mat4 } from 'wgpu-matrix';
+import { setupResizeObserver } from './utils/utils';
 
 async function main() {
 
-    //*********************************************************************************************************
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 
-    if (!navigator.gpu) {
-        throw new Error("WebGPU not supported on this browser.")
-    }
+    const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
-    const adpater = await navigator.gpu.requestAdapter()
-    if (!adpater) {
-        throw new Error("No appropriate GPUAdapter found.")
-    }
+    let matrixProjection = getMatrixProjection(aspectRatio)
+    let MatrixView = getMatrixView()
 
-    const device: GPUDevice = await adpater.requestDevice()
+    let matrixModel = mat4.identity()
 
-    const context = canvas.getContext('webgpu')
-    if (!context) {
-        throw new Error("WebGPU context not available.");
-    }
+    //Set Uniform Buffer *****************************************************************************
+    const matrixBufferArray = new Float32Array(4 * 4 * 3)
 
-    const canvasFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat()
-    context.configure({
-        device,
-        format: canvasFormat,
+    const matrixBuffer: GPUBuffer = device.createBuffer({
+        label: 'Uniform buffer',
+        size: matrixBufferArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
-    //*********************************************************************************************************
 
-    // let width: number = 1024
-    // let height: number = 1024
-    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
-    let width: number = canvasContainer.clientWidth;
-    let height: number = canvasContainer.clientHeight;
-    let resolution: number = Math.min(width, height) // pixels resolution x resolution
-    canvas.width = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
-    canvas.height = Math.max(1, Math.min(resolution, device.limits.maxTextureDimension2D));
+    matrixBufferArray.set(matrixModel, 0)
+    matrixBufferArray.set(MatrixView, 16)
+    matrixBufferArray.set(matrixProjection, 32)
 
-    let gridSize: number = Math.floor(resolution / 4) // grid = gridSize x gridSize
-    let sideLength: number = resolution / gridSize //square side lenght
+    device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
+    //************************************************************************************************
+
+    let gridSize: number = 200 // grid = gridSize x gridSize
+    let sideLength: number = 2 / gridSize //square side lenght
     let shape: number = 1
 
-    const paramsArrayBuffer = new ArrayBuffer(16) // 2 u32 e 2 f32
+    const paramsArrayBuffer = new ArrayBuffer(12) // 2 u32 e 2 f32
     const paramsUint32View = new Uint32Array(paramsArrayBuffer)
     const paramsFloat32View = new Float32Array(paramsArrayBuffer)
     paramsUint32View[0] = shape
     paramsUint32View[1] = gridSize
-    paramsFloat32View[2] = resolution
-    paramsFloat32View[3] = sideLength
+    paramsFloat32View[2] = sideLength
 
     const paramsBuffer: GPUBuffer = device.createBuffer({
         label: 'Params buffer',
@@ -60,11 +53,10 @@ async function main() {
 
     function updateParamsBuffer() {
         // resolution = Math.min(width, height) // pixels resolution x resolution
-        sideLength = resolution / gridSize //square side lenght
+        sideLength = 2 / gridSize //square side lenght
         paramsUint32View[0] = shape
         paramsUint32View[1] = gridSize
-        paramsFloat32View[2] = resolution
-        paramsFloat32View[3] = sideLength
+        paramsFloat32View[2] = sideLength
         device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
     }
 
@@ -82,7 +74,12 @@ async function main() {
         },
         {
             binding: 2,
-            visibility: GPUShaderStage.VERTEX | GPUShaderStage.COMPUTE,
+            visibility:  GPUShaderStage.COMPUTE,
+            buffer: { type: 'uniform' }
+        },
+        {
+            binding: 3,
+            visibility: GPUShaderStage.VERTEX,
             buffer: { type: 'uniform' }
         },
         ]
@@ -124,6 +121,10 @@ async function main() {
                     binding: 2,
                     resource: { buffer: paramsBuffer },
                 },
+                {
+                    binding: 3,
+                    resource: { buffer: matrixBuffer }
+                },
                 ]
             }),
             device.createBindGroup({
@@ -140,6 +141,10 @@ async function main() {
                 {
                     binding: 2,
                     resource: { buffer: paramsBuffer },
+                },
+                {
+                    binding: 3,
+                    resource: { buffer: matrixBuffer }
                 },
                 ]
             })
@@ -248,11 +253,14 @@ async function main() {
         render()
     });
 
-    gui.add(options, "gridSize", 10, Math.floor(resolution), 10).onFinishChange((value) => {
+    gui.add(options, "gridSize", 10, 2000, 10).onFinishChange((value) => {
         gridSize = value;
         updateParamsBuffer()
         render()
     });
+
+    // resize screen
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, matrixProjection, getMatrixProjection, render);
 
     //*********************************************************************************************************
 }

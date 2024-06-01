@@ -1,7 +1,6 @@
 struct Params {
     shape: u32,
     gridSize: u32,
-    resolution: f32,
     sideLength: f32
   };
 
@@ -10,8 +9,8 @@ fn getState(a: f32, b: f32, c: f32, d: f32) -> f32 {
 }
 
 fn isInside(x: f32, y: f32, selector: u32) -> f32 {
-    var xc: f32 = params.resolution / 2.0;
-    var yc: f32 = params.resolution / 2.0;
+    var xc: f32 = 1.0;
+    var yc: f32 = 1.0;
 
     // Variáveis comuns para algumas das funções
     let xp = x - xc;
@@ -23,7 +22,7 @@ fn isInside(x: f32, y: f32, selector: u32) -> f32 {
             let theta = atan2(yp, xp);
             let r = sqrt(xp * xp + yp * yp);
             let n: f32 = 10.0;
-            let star_r = (params.resolution / 4.0) + (params.resolution / 8.0) * sin(n * theta);
+            let star_r = 0.5 + 0.25 * sin(n * theta);
             if r <= star_r {
                 return 1.0;
             } else {
@@ -32,7 +31,7 @@ fn isInside(x: f32, y: f32, selector: u32) -> f32 {
         }
         case 2: {
             // Função 2: Infinito
-            let a: f32 = params.resolution / 4.0;
+            let a: f32 = 0.5;
             let left = (xp * xp + yp * yp) * (xp * xp + yp * yp);
             let right = 2.0 * a * a * (xp * xp - yp * yp);
             if left <= right {
@@ -43,7 +42,7 @@ fn isInside(x: f32, y: f32, selector: u32) -> f32 {
         }
         case 3: {
             // Função 3: Círculo
-            let rCircle: f32 = params.resolution / 2.0 - 100.0;
+            let rCircle: f32 = 1.0 - 0.1; // Ajuste de raio
             let fCircle = pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCircle, 2.0);
             if fCircle <= 0.0 {
                 return 1.0;
@@ -53,8 +52,8 @@ fn isInside(x: f32, y: f32, selector: u32) -> f32 {
         }
         case 4: {
             // Função 4: Coração
-            let xpHeart = (x - xc) / (params.resolution / 3.0);
-            let ypHeart = (y - yc) / (params.resolution / 3.0);
+            let xpHeart = (x - xc) / 0.75;
+            let ypHeart = (y - yc) / 0.75;
             let fHeart = pow(xpHeart * xpHeart + ypHeart * ypHeart - 1.0, 3.0) - xpHeart * xpHeart * pow(ypHeart, 3.0);
             if fHeart <= 0.0 {
                 return 1.0;
@@ -69,9 +68,9 @@ fn isInside(x: f32, y: f32, selector: u32) -> f32 {
     }
 }
 
+
     @group(0) @binding(0) var<storage> pointRead: array<vec2<f32>>;
     @group(0) @binding(1) var<storage,read_write> point: array<vec2<f32>>;
-    // @group(0) @binding(2) var<uniform> params: Params;
     @group(0) @binding(2) var<uniform> params: Params;
 
 

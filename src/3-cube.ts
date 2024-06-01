@@ -1,51 +1,43 @@
-import { mat4, vec3 } from 'wgpu-matrix';
+import { mat4 } from 'wgpu-matrix';
 import triangle from './3-cube.wgsl'
 import { cubeVertexArray } from './meshes/cube'
+import { initializeWebGPU } from './utils/webgpuInit';
+import { getMatrixProjection, getMatrixView, toRadians } from './utils/matrix';
+import { setupResizeObserver } from './utils/utils';
 // import { mat4, vec3 } from 'gl-matrix'
 
 
 async function main() {
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 
-    if (!navigator.gpu) {
-        throw new Error("WebGPU not supported on this browser.")
-    }
+    const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
-    const adpater = await navigator.gpu.requestAdapter()
-    if (!adpater) {
-        throw new Error("No appropriate GPUAdapter found.")
-    }
+    let matrixProjection = getMatrixProjection(aspectRatio)
+    let MatrixView = getMatrixView()
 
-    const device: GPUDevice = await adpater.requestDevice()
+    let matrixModel = mat4.identity()
 
-    const context = canvas.getContext('webgpu')
-    if (!context) {
-        throw new Error("WebGPU context not available.");
-    }
+    let rotation = toRadians(30)
+    matrixModel = mat4.rotateX(matrixModel, rotation)
+    matrixModel = mat4.rotateZ(matrixModel, rotation)
 
-    const canvasFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat()
-    context.configure({
-        device,
-        format: canvasFormat
+    //Set Uniform Buffer *****************************************************************************
+    const matrixBufferArray = new Float32Array(4 * 4 * 3)
+
+    const matrixBuffer: GPUBuffer = device.createBuffer({
+        label: 'Uniform buffer',
+        size: matrixBufferArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
 
-    const canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement
-    let width: number = canvasContainer.clientWidth;
-    let height: number = canvasContainer.clientHeight;
-    // let resolution: number = Math.min(width, height) // pixels resolution x resolution
-    canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
-    canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
-    console.log(`Canvas Container height: ${canvasContainer.clientHeight}`)
-    console.log(`Canvas height: ${canvas.clientHeight}`)
+    matrixBufferArray.set(matrixModel, 0)
+    matrixBufferArray.set(MatrixView, 16)
+    matrixBufferArray.set(matrixProjection, 32)
 
-    // const vertices = new Float32Array([
-    //     0.0, 0.5, 0.0,
-    //     -0.5, -0.5, 0.0,
-    //     0.5, -0.5, 0.0
-    // ]);
+    device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
+    //************************************************************************************************
 
     const vertices = cubeVertexArray
-
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
         label: 'Triangle vertices',
@@ -64,67 +56,22 @@ async function main() {
         }]
     }
 
-    function toRadians(degrees: number) {
-        return degrees * (Math.PI / 180);
-    }
+    // const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
+    //     label: 'Bind Group Layout',
+    //     entries: [{
+    //         binding: 0,
+    //         visibility: GPUShaderStage.VERTEX,
+    //         buffer: { type: 'uniform' }
+    //     },
+    //     ]
+    // })
 
-    const fovy = toRadians(45)
-    const aspectRatio = width / height
-    // const aspectRatio = 512 / 512
-    const nearPlane = 0.1
-    const farPlane = 100
-    const projection = mat4.perspective(fovy, aspectRatio, nearPlane, farPlane)
 
-    const eye = vec3.fromValues(0, 0, -5)
-    const target = vec3.fromValues(0, 0, 0)
-    const up = vec3.fromValues(0, 1, 0)
-    const view = mat4.lookAt(eye, target, up)
 
-    let model = mat4.identity()
-    let rotation = toRadians(30)
-    model = mat4.rotateX(model, rotation)
-    model = mat4.rotateZ(model, rotation)
-
-    const uniformBufferArray = new Float32Array(4 * 4 * 3)
-
-    const uniformBuffer: GPUBuffer = device.createBuffer({
-        label: 'Uniform buffer',
-        size: uniformBufferArray.byteLength,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-    })
-
-    uniformBufferArray.set(model, 0)
-    uniformBufferArray.set(view, 16)
-    uniformBufferArray.set(projection, 32)
-
-    device.queue.writeBuffer(uniformBuffer, 0, uniformBufferArray)
-    // device.queue.writeBuffer(uniformBuffer, 0, <ArrayBuffer>model)
-    // device.queue.writeBuffer(uniformBuffer, 64, <ArrayBuffer>view)
-    // device.queue.writeBuffer(uniformBuffer, 128, <ArrayBuffer>projection)
-
-    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
-        label: 'Bind Group Layout',
-        entries: [{
-            binding: 0,
-            visibility: GPUShaderStage.VERTEX,
-            buffer: { type: 'uniform' }
-        },
-        ]
-    })
-
-    const bindGroup: GPUBindGroup = device.createBindGroup({
-        label: 'Bind Group',
-        layout: bindGroupLayout,
-        entries: [{
-            binding: 0,
-            resource: { buffer: uniformBuffer }
-        }]
-    })
-
-    const pipelineLayout = device.createPipelineLayout({
-        label: 'Pipeline Layout',
-        bindGroupLayouts: [bindGroupLayout],
-    })
+    // const pipelineLayout = device.createPipelineLayout({
+    //     label: 'Pipeline Layout',
+    //     bindGroupLayouts: [bindGroupLayout],
+    // })
 
 
     const triangleShaderModule: GPUShaderModule = device.createShaderModule({
@@ -132,9 +79,9 @@ async function main() {
         code: triangle
     })
 
-    const trianglePipeline: GPURenderPipeline = device.createRenderPipeline({
+    const pipeline: GPURenderPipeline = device.createRenderPipeline({
         label: 'Triangle pipeline',
-        layout: pipelineLayout,
+        layout: 'auto',
         vertex: {
             module: triangleShaderModule,
             entryPoint: "vertexMain",
@@ -147,6 +94,15 @@ async function main() {
                 format: canvasFormat
             }]
         },
+    })
+
+    const bindGroup: GPUBindGroup = device.createBindGroup({
+        label: 'Bind Group',
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [{
+            binding: 0,
+            resource: { buffer: matrixBuffer }
+        }]
     })
 
 
@@ -162,7 +118,7 @@ async function main() {
             }]
         }
         const pass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
-        pass.setPipeline(trianglePipeline)
+        pass.setPipeline(pipeline)
         pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
         pass.draw(vertices.length / 3)
@@ -171,6 +127,9 @@ async function main() {
     }
 
     render()
+
+    // resize screen
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, matrixProjection, getMatrixProjection, render);
 }
 
 main()
