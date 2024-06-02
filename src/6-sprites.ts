@@ -1,5 +1,5 @@
 // import { mat4 } from 'wgpu-matrix'
-import { mat4, Mat4 } from 'wgpu-matrix'
+import { mat4, Mat4, vec3 } from 'wgpu-matrix'
 import sprite from './6-sprites.wgsl'
 import { updateArcRotateCamera, getArcRotateCamera, getProjectionMatrix } from './utils/matrix'
 import { setupResizeObserver } from './utils/utils'
@@ -15,7 +15,8 @@ async function main() {
 
     let modelMatrix = mat4.identity()
     // modelMatrix = mat4.rotateX(modelMatrix, toRadians(60))
-    // modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(1 / 4, 1 / 4, 1))
+    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(1 / 4, 1 / 4, 1))
+    modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(0, 1, 0))
 
     let viewMatrix = getArcRotateCamera()
 
@@ -49,7 +50,7 @@ async function main() {
     ])
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
-        label: 'Triangle vertices',
+        label: ' vertices',
         size: vertices.byteLength,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     })
@@ -65,21 +66,72 @@ async function main() {
         }]
     }
 
-    const triangleShaderModule: GPUShaderModule = device.createShaderModule({
-        label: 'Triangle shader',
+    const numberOfQuads = 30
+    const quadInstanceArray = new Float32Array(numberOfQuads * 3)
+    const quadInstaceBuffer = device.createBuffer({
+        label: 'Quad Instaces Buffer',
+        size: quadInstanceArray.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+    })
+
+    for (let i = 0; i < numberOfQuads; i++) {
+        quadInstanceArray[i * 3 + 0] = (Math.random() * 40) - 20
+        quadInstanceArray[i * 3 + 1] = Math.random() * 10
+        quadInstanceArray[i * 3 + 2] = (Math.random() * 10) -5
+    }
+    device.queue.writeBuffer(quadInstaceBuffer, 0, quadInstanceArray)
+
+
+    const shaderModule: GPUShaderModule = device.createShaderModule({
+        label: 'Shader',
         code: sprite
     })
 
-    const trianglePipeline: GPURenderPipeline = device.createRenderPipeline({
-        label: 'Triangle pipeline',
-        layout: 'auto',
+    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
+        label: 'Bind Group Layout',
+        entries: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: { type: 'uniform' }
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: { type: 'read-only-storage' }
+            },
+        ]
+    })
+
+    const bindGroup: GPUBindGroup = device.createBindGroup({
+        label: 'Bind Group',
+        layout: bindGroupLayout,
+        entries: [{
+            binding: 0,
+            resource: { buffer: matrixBuffer }
+        },
+        {
+            binding: 1,
+            resource: { buffer: quadInstaceBuffer }
+        }
+        ]
+    })
+
+    const pipelineLayout = device.createPipelineLayout({
+        label: 'Pipeline Layout',
+        bindGroupLayouts: [bindGroupLayout]
+    })
+
+    const pipeline: GPURenderPipeline = device.createRenderPipeline({
+        label: 'pipeline',
+        layout: pipelineLayout,
         vertex: {
-            module: triangleShaderModule,
+            module: shaderModule,
             entryPoint: "vertexMain",
             buffers: [vertexBufferLayout]
         },
         fragment: {
-            module: triangleShaderModule,
+            module: shaderModule,
             entryPoint: 'fragmentMain',
             targets: [{
                 format: canvasFormat
@@ -96,23 +148,14 @@ async function main() {
         // }
     })
 
-    const bindGroup: GPUBindGroup = device.createBindGroup({
-        label: 'Bind Group',
-        layout: trianglePipeline.getBindGroupLayout(0),
-        entries: [{
-            binding: 0,
-            resource: { buffer: matrixBuffer }
-        },
-        ]
-    })
-
-    const depthTexture = device.createTexture({
-        size: [canvas.width, canvas.height, 1],
-        format: "depth24plus",
-        usage: GPUTextureUsage.RENDER_ATTACHMENT
-    })
-
+    
     function render() {
+        const depthTexture = device.createTexture({
+            size: [canvas.width, canvas.height, 1],
+            format: "depth24plus",
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        })
+        
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -139,10 +182,10 @@ async function main() {
         pass.draw(vertexCountPlane)
 
         // Segundo pipeline draw squad
-        pass.setPipeline(trianglePipeline)
+        pass.setPipeline(pipeline)
         pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
-        pass.draw(vertices.length / 2)
+        pass.draw(vertices.length / 2, numberOfQuads)
 
 
         pass.end()
