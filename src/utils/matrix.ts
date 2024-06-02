@@ -20,7 +20,7 @@ export function toRadians(degrees: number) {
     return degrees * (Math.PI / 180);
 }
 
-export const getArcRotateCamera = () =>{
+export const getArcRotateCamera = () => {
     let target = vec3.fromValues(0, 0, 0);
     let alpha = Math.PI / 2;  // Rotação longitudinal
     let beta = 0.0;   // Rotação latitudinal
@@ -102,8 +102,35 @@ export const updateArcRotateCamera = (
         }
     });
 
-    canvas.addEventListener('wheel',(event)=>{
+    canvas.addEventListener('wheel', (event) => {
         radius += event.deltaY * 0.1
         updateCamera()
     })
+
+    // Controle do teclado
+    const translationSpeed = 0.5;
+
+    window.addEventListener('keydown', (event) => {
+        switch (event.key) {
+            case 'ArrowUp':
+                target[1] += translationSpeed;
+                break;
+            case 'ArrowDown':
+                target[1] -= translationSpeed;
+                break;
+            case 'ArrowLeft':
+                target[0] -= translationSpeed;
+                break;
+            case 'ArrowRight':
+                target[0] += translationSpeed;
+                break;
+            case 'w':
+                target[2] -= translationSpeed;
+                break;
+            case 's':
+                target[2] += translationSpeed;
+                break;
+        }
+        updateCamera();
+    });
 }

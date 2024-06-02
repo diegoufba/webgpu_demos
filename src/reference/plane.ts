@@ -76,6 +76,11 @@ export const getReferencePlane = (
             // topology: 'triangle-list'
             // topology: 'line-list'
             topology: 'point-list'
+        },
+        depthStencil: {
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus'
         }
     })
 

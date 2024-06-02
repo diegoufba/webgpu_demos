@@ -85,6 +85,11 @@ async function main() {
                 format: canvasFormat
             }]
         },
+        depthStencil: {
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus'
+        }
         // primitive: {
         //     topology: 'line-list'
         //     // topology: 'point-list'
@@ -101,6 +106,12 @@ async function main() {
         ]
     })
 
+    const depthTexture = device.createTexture({
+        size: [canvas.width, canvas.height, 1],
+        format: "depth24plus",
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
+    })
+
     function render() {
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
@@ -110,7 +121,13 @@ async function main() {
                 loadOp: 'clear',
                 clearValue: { r: 0.2, g: 0.2, b: 0.298, a: 1 },
                 storeOp: 'store'
-            }]
+            }],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: "store"
+            }
         }
         const pass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
 
@@ -139,7 +156,7 @@ async function main() {
     }
 
     // update camera on mouse move
-    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render,updateViewMatrix)
+    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render, updateViewMatrix)
 
     const updateProjectionMatrix = (newMatrix: Mat4) => {
         projectionMatrix = newMatrix;
