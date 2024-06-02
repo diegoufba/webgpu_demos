@@ -23,8 +23,8 @@ export const getTexture = async (location: string, device: GPUDevice) => {
 
 
 export const setupResizeObserver = (
-    canvas: HTMLCanvasElement, device: GPUDevice, uniformBuffer: GPUBuffer, uniformBufferArray: Float32Array, matrixProjection: Mat4,
-    getMatrixProjection: (aspectRatio?: number, fovy?: number, nearPlane?: number, farPlane?: number) => Mat4,
+    canvas: HTMLCanvasElement, device: GPUDevice, uniformBuffer: GPUBuffer, uniformBufferArray: Float32Array, projectionMatrix: Mat4,
+    getProjectionMatrix: (aspectRatio?: number, fovy?: number, nearPlane?: number, farPlane?: number) => Mat4,
     render: () => void) => {
 
     const observer = new ResizeObserver(entries => {
@@ -33,8 +33,8 @@ export const setupResizeObserver = (
         canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
         canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
 
-        matrixProjection = getMatrixProjection(width / height);
-        uniformBufferArray.set(matrixProjection, 32);
+        projectionMatrix = getProjectionMatrix(width / height);
+        uniformBufferArray.set(projectionMatrix, 32);
         device.queue.writeBuffer(uniformBuffer, 0, uniformBufferArray);
 
         render();

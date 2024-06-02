@@ -2,7 +2,7 @@ import { mat4 } from 'wgpu-matrix';
 import triangle from './3-cube.wgsl'
 import { cubeVertexArray } from './meshes/cube'
 import { initializeWebGPU } from './utils/webgpuInit';
-import { getMatrixProjection, getMatrixView, toRadians } from './utils/matrix';
+import { getArcRotateCamera, getProjectionMatrix, toRadians, updateArcRotateCamera } from './utils/matrix';
 import { setupResizeObserver } from './utils/utils';
 // import { mat4, vec3 } from 'gl-matrix'
 
@@ -12,14 +12,14 @@ async function main() {
 
     const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
-    let matrixProjection = getMatrixProjection(aspectRatio)
-    let MatrixView = getMatrixView()
+    let projectionMatrix = getProjectionMatrix(aspectRatio)
+    let viewMatrix = getArcRotateCamera()
 
-    let matrixModel = mat4.identity()
+    let modelMatrix = mat4.identity()
 
     let rotation = toRadians(30)
-    matrixModel = mat4.rotateX(matrixModel, rotation)
-    matrixModel = mat4.rotateY(matrixModel, rotation)
+    modelMatrix = mat4.rotateX(modelMatrix, rotation)
+    modelMatrix = mat4.rotateY(modelMatrix, rotation)
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -30,9 +30,9 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
 
-    matrixBufferArray.set(matrixModel, 0)
-    matrixBufferArray.set(MatrixView, 16)
-    matrixBufferArray.set(matrixProjection, 32)
+    matrixBufferArray.set(modelMatrix, 0)
+    matrixBufferArray.set(viewMatrix, 16)
+    matrixBufferArray.set(projectionMatrix, 32)
 
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
     //************************************************************************************************
@@ -128,8 +128,11 @@ async function main() {
 
     render()
 
+    // update camera on mouse move
+    updateArcRotateCamera(canvas, viewMatrix, matrixBufferArray, matrixBuffer, device, render)
+    
     // resize screen
-    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, matrixProjection, getMatrixProjection, render);
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, projectionMatrix, getProjectionMatrix, render);
 }
 
 main()

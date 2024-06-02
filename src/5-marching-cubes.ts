@@ -1,5 +1,5 @@
-import compute from './2-compute.wgsl?raw'
-import shader from './2-shader.wgsl?raw'
+import compute from './5-compute.wgsl'
+import shader from './5-shader.wgsl'
 import * as dat from 'dat.gui';
 import { initializeWebGPU } from './utils/webgpuInit';
 import { getProjectionMatrix, getViewMatrix } from './utils/matrix';

@@ -1,7 +1,7 @@
 import { mat4 } from 'wgpu-matrix';
 import wave from './4-wave.wgsl'
 import { createPlane } from './meshes/plane'
-import { getMatrixProjection, getMatrixView, toRadians } from './utils/matrix'
+import { getProjectionMatrix, getViewMatrix, toRadians } from './utils/matrix'
 import { getTexture, setupResizeObserver } from './utils/utils'
 import { initializeWebGPU } from './utils/webgpuInit'
 import * as dat from 'dat.gui';
@@ -12,11 +12,11 @@ async function main() {
 
     const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
-    let matrixProjection = getMatrixProjection(aspectRatio)
-    let MatrixView = getMatrixView()
+    let projectionMatrix = getProjectionMatrix(aspectRatio)
+    let viewMatrix = getViewMatrix()
 
-    let matrixModel = mat4.identity()
-    matrixModel = mat4.rotateX(matrixModel, toRadians(-60))
+    let modelMatrix = mat4.identity()
+    modelMatrix = mat4.rotateX(modelMatrix, toRadians(-60))
     // model = mat4.scale(model, [1.5, 1.5, 1.5])
     // model = mat4.rotateZ(model, rotation)
 
@@ -29,9 +29,9 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
 
-    uniformBufferArray.set(matrixModel, 0)
-    uniformBufferArray.set(MatrixView, 16)
-    uniformBufferArray.set(matrixProjection, 32)
+    uniformBufferArray.set(modelMatrix, 0)
+    uniformBufferArray.set(viewMatrix, 16)
+    uniformBufferArray.set(projectionMatrix, 32)
 
     device.queue.writeBuffer(uniformBuffer, 0, uniformBufferArray)
 
@@ -226,7 +226,7 @@ async function main() {
     //************************************************************************************************
 
     // resize screen
-    setupResizeObserver(canvas, device, uniformBuffer, uniformBufferArray, matrixProjection, getMatrixProjection, render);
+    setupResizeObserver(canvas, device, uniformBuffer, uniformBufferArray, projectionMatrix, getProjectionMatrix, render);
 }
 
 main()

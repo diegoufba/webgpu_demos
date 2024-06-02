@@ -10,7 +10,7 @@ body {
 
 .sidebar {
     margin-top: 4rem;
-    min-width: 300px;
+    width: 300px;
     background-color: #fff;
     overflow-y: scroll;
     display: flex;

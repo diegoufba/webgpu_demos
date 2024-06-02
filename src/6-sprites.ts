@@ -1,7 +1,7 @@
 // import { mat4 } from 'wgpu-matrix'
-import { mat4 } from 'wgpu-matrix'
-import triangle from './1-triangle.wgsl?raw'
-import { getProjectionMatrix, getViewMatrix } from './utils/matrix'
+import { mat4} from 'wgpu-matrix'
+import sprite from './6-sprites.wgsl'
+import { updateArcRotateCamera, getArcRotateCamera, getProjectionMatrix } from './utils/matrix'
 import { setupResizeObserver } from './utils/utils'
 import { initializeWebGPU } from './utils/webgpuInit'
 
@@ -11,11 +11,12 @@ async function main() {
     const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
     let projectionMatrix = getProjectionMatrix(aspectRatio)
-    let viewMatrix = getViewMatrix()
 
     let modelMatrix = mat4.identity()
-    // let modelMatrix = mat4.create()
-    // mat4.identity(modelMatrix)
+    // modelMatrix = mat4.rotateX(modelMatrix, toRadians(60))
+    // modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(1 / 4, 1 / 4, 1))
+
+    let viewMatrix = getArcRotateCamera()
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -35,10 +36,15 @@ async function main() {
     //************************************************************************************************
 
 
+
     const vertices = new Float32Array([
-        -0.8, -0.8, 
-        0.8, -0.8, 
-        0.8, 0.8, 
+        -1, -1,
+        1, -1,
+        1, 1,
+
+        1, 1,
+        -1, 1,
+        -1, -1
     ])
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
@@ -60,7 +66,7 @@ async function main() {
 
     const triangleShaderModule: GPUShaderModule = device.createShaderModule({
         label: 'Triangle shader',
-        code: triangle
+        code: sprite
     })
 
     const trianglePipeline: GPURenderPipeline = device.createRenderPipeline({
@@ -115,6 +121,9 @@ async function main() {
     }
 
     render()
+
+    // update camera on mouse move
+    updateArcRotateCamera(canvas,viewMatrix,matrixBufferArray,matrixBuffer,device,render)
 
     // resize screen
     setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, projectionMatrix, getProjectionMatrix, render);
