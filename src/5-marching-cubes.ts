@@ -3,7 +3,7 @@ import shader from './5-shader.wgsl'
 import * as dat from 'dat.gui';
 import { initializeWebGPU } from './utils/webgpuInit';
 import { getProjectionMatrix, getViewMatrix } from './utils/matrix';
-import { mat4, vec3 } from 'wgpu-matrix';
+import { Mat4, mat4, vec3 } from 'wgpu-matrix';
 import { setupResizeObserver } from './utils/utils';
 
 async function main() {
@@ -287,8 +287,11 @@ async function main() {
         render()
     });
 
+    const updateProjectionMatrix = (newMatrix: Mat4) => {
+        projectionMatrix = newMatrix;
+    };
     // resize screen
-    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, projectionMatrix, getProjectionMatrix, render);
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, getProjectionMatrix, render, updateProjectionMatrix);
 
     //*********************************************************************************************************
 }

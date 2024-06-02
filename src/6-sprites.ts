@@ -1,9 +1,10 @@
 // import { mat4 } from 'wgpu-matrix'
-import { mat4} from 'wgpu-matrix'
+import { mat4, Mat4 } from 'wgpu-matrix'
 import sprite from './6-sprites.wgsl'
 import { updateArcRotateCamera, getArcRotateCamera, getProjectionMatrix } from './utils/matrix'
 import { setupResizeObserver } from './utils/utils'
 import { initializeWebGPU } from './utils/webgpuInit'
+import { getReferencePlane, updateMatrix } from './reference/plane'
 
 async function main() {
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -35,7 +36,7 @@ async function main() {
 
     //************************************************************************************************
 
-
+    const { pipelinePlane, bindGroupPlane, vertexBufferPlane, vertexCountPlane, modelMatrixPlane, matrixBufferArrayPlane, matrixBufferPlane } = getReferencePlane(device, canvasFormat, projectionMatrix, viewMatrix)
 
     const vertices = new Float32Array([
         -1, -1,
@@ -112,21 +113,39 @@ async function main() {
             }]
         }
         const pass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
+
+        // Primeiro pipeline draw plane
+        updateMatrix(modelMatrixPlane, viewMatrix, projectionMatrix, matrixBufferArrayPlane, matrixBufferPlane, device)
+        pass.setPipeline(pipelinePlane)
+        pass.setBindGroup(0, bindGroupPlane)
+        pass.setVertexBuffer(0, vertexBufferPlane)
+        pass.draw(vertexCountPlane)
+
+        // Segundo pipeline draw squad
         pass.setPipeline(trianglePipeline)
         pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
         pass.draw(vertices.length / 2)
+
+
         pass.end()
         device.queue.submit([encoder.finish()])
     }
 
     render()
 
-    // update camera on mouse move
-    updateArcRotateCamera(canvas,viewMatrix,matrixBufferArray,matrixBuffer,device,render)
+    const updateViewMatrix = (newMatrix: Mat4) => {
+        viewMatrix = newMatrix
+    }
 
+    // update camera on mouse move
+    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render,updateViewMatrix)
+
+    const updateProjectionMatrix = (newMatrix: Mat4) => {
+        projectionMatrix = newMatrix;
+    };
     // resize screen
-    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, projectionMatrix, getProjectionMatrix, render);
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, getProjectionMatrix, render, updateProjectionMatrix);
 }
 
 main()

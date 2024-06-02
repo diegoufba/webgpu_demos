@@ -1,9 +1,11 @@
 // import { mat4 } from 'wgpu-matrix'
-import { Mat4, mat4 } from 'wgpu-matrix'
-import triangle from './1-triangle.wgsl?raw'
-import { getProjectionMatrix, getViewMatrix } from './utils/matrix'
-import { setupResizeObserver } from './utils/utils'
-import { initializeWebGPU } from './utils/webgpuInit'
+import { mat4 } from 'wgpu-matrix'
+import triangle from './shader.wgsl'
+import { initializeWebGPU } from '../utils/webgpuInit'
+import { getProjectionMatrix, getViewMatrix, toRadians } from '../utils/matrix'
+import { setupResizeObserver } from '../utils/utils'
+import { createPlane } from '../meshes/plane'
+
 
 async function main() {
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -14,8 +16,7 @@ async function main() {
     let viewMatrix = getViewMatrix()
 
     let modelMatrix = mat4.identity()
-    // let modelMatrix = mat4.create()
-    // mat4.identity(modelMatrix)
+    modelMatrix = mat4.rotateX(modelMatrix,toRadians(-60))
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -34,12 +35,10 @@ async function main() {
 
     //************************************************************************************************
 
+    const size = 100
+    const scale = size/4
 
-    const vertices = new Float32Array([
-        -0.8, -0.8, 
-        0.8, -0.8, 
-        0.8, 0.8, 
-    ])
+    const vertices = createPlane(false,true,size,size,scale,scale)
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
         label: 'Triangle vertices',
@@ -78,10 +77,10 @@ async function main() {
                 format: canvasFormat
             }]
         },
-        // primitive: {
-        //     topology: 'line-list'
-        //     // topology: 'point-list'
-        // }
+        primitive: {
+            topology: 'line-list'
+            // topology: 'point-list'
+        }
     })
 
     const bindGroup: GPUBindGroup = device.createBindGroup({
@@ -114,11 +113,10 @@ async function main() {
         device.queue.submit([encoder.finish()])
     }
 
-    const updateProjectionMatrix = (newMatrix: Mat4) => {
-        projectionMatrix = newMatrix;
-    };
+    render()
+
     // resize screen
-    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, getProjectionMatrix, render, updateProjectionMatrix);
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, projectionMatrix, getProjectionMatrix, render);
 }
 
 main()

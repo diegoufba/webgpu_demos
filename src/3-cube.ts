@@ -1,4 +1,4 @@
-import { mat4 } from 'wgpu-matrix';
+import { Mat4, mat4 } from 'wgpu-matrix';
 import triangle from './3-cube.wgsl'
 import { cubeVertexArray } from './meshes/cube'
 import { initializeWebGPU } from './utils/webgpuInit';
@@ -128,11 +128,18 @@ async function main() {
 
     render()
 
+    const updateViewMatrix = (newMatrix: Mat4) => {
+        viewMatrix = newMatrix
+    }
+
     // update camera on mouse move
-    updateArcRotateCamera(canvas, viewMatrix, matrixBufferArray, matrixBuffer, device, render)
-    
+    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render,updateViewMatrix)
+
+    const updateProjectionMatrix = (newMatrix: Mat4) => {
+        projectionMatrix = newMatrix;
+    };
     // resize screen
-    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, projectionMatrix, getProjectionMatrix, render);
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, getProjectionMatrix, render, updateProjectionMatrix);
 }
 
 main()

@@ -1,4 +1,4 @@
-import { mat4 } from 'wgpu-matrix';
+import { Mat4, mat4 } from 'wgpu-matrix';
 import wave from './4-wave.wgsl'
 import { createPlane } from './meshes/plane'
 import { getProjectionMatrix, getViewMatrix, toRadians } from './utils/matrix'
@@ -21,19 +21,19 @@ async function main() {
     // model = mat4.rotateZ(model, rotation)
 
     //Set Uniform Buffer *****************************************************************************
-    const uniformBufferArray = new Float32Array(4 * 4 * 3)
+    const matrixBufferArray = new Float32Array(4 * 4 * 3)
 
-    const uniformBuffer: GPUBuffer = device.createBuffer({
+    const matrixBuffer: GPUBuffer = device.createBuffer({
         label: 'Uniform buffer',
-        size: uniformBufferArray.byteLength,
+        size: matrixBufferArray.byteLength,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
 
-    uniformBufferArray.set(modelMatrix, 0)
-    uniformBufferArray.set(viewMatrix, 16)
-    uniformBufferArray.set(projectionMatrix, 32)
+    matrixBufferArray.set(modelMatrix, 0)
+    matrixBufferArray.set(viewMatrix, 16)
+    matrixBufferArray.set(projectionMatrix, 32)
 
-    device.queue.writeBuffer(uniformBuffer, 0, uniformBufferArray)
+    device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
 
 
     const paramsBufferArray = new Float32Array([1, 4, 4, 1]) //time,kx,ky,height
@@ -49,7 +49,7 @@ async function main() {
 
     //Set Vertex Buffer ******************************************************************************
     const size = 100
-    const vertices = createPlane(size, size, 2)
+    const vertices = createPlane(true,false,size, size, 2)
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
         label: 'Triangle vertices',
@@ -112,7 +112,7 @@ async function main() {
         layout: bindGroupLayout,
         entries: [{
             binding: 0,
-            resource: { buffer: uniformBuffer }
+            resource: { buffer: matrixBuffer }
         }, {
             binding: 1,
             resource: { buffer: paramsBufferBuffer }
@@ -225,8 +225,13 @@ async function main() {
     });
     //************************************************************************************************
 
+
+    const updateProjectionMatrix = (newMatrix: Mat4) => {
+        projectionMatrix = newMatrix;
+    };
     // resize screen
-    setupResizeObserver(canvas, device, uniformBuffer, uniformBufferArray, projectionMatrix, getProjectionMatrix, render);
+    setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, getProjectionMatrix, render, updateProjectionMatrix);
+
 }
 
 main()

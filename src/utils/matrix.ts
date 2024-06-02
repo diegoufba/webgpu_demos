@@ -40,11 +40,11 @@ export const getArcRotateCamera = () =>{
 
 export const updateArcRotateCamera = (
     canvas: HTMLCanvasElement,
-    viewMatrix: Mat4,
     matrixBufferArray: Float32Array,
     matrixBuffer: GPUBuffer,
     device: GPUDevice,
-    render: () => void
+    render: () => void,
+    updateViewMatrix: (newMatrix: Mat4) => void
 ) => {
     let target = vec3.fromValues(0, 0, 0);
     let alpha = Math.PI / 2;  // Rotação longitudinal
@@ -65,8 +65,9 @@ export const updateArcRotateCamera = (
         eye[2] = radius * Math.cos(beta) * Math.sin(alpha);
 
         // Recalcular a matriz de visualização
-        viewMatrix = mat4.lookAt(eye, target, up)
-        matrixBufferArray.set(viewMatrix, 16)
+        const newViewMatrix = mat4.lookAt(eye, target, up)
+        updateViewMatrix(newViewMatrix)
+        matrixBufferArray.set(newViewMatrix, 16)
         device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
         render()
     }

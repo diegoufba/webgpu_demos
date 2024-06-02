@@ -1,4 +1,6 @@
 export const createPlane = (
+    isTextured: boolean,
+    isWireFrame: boolean,
     verticesWidth: number,
     verticesHeight: number = verticesWidth,
     width: number = 1,
@@ -31,37 +33,80 @@ export const createPlane = (
             const [u2, v2] = calculateUV(x2, y2);
             const [u3, v3] = calculateUV(x3, y3);
 
-            // Primeiro triângulo (x0, y0) -> (x1, y1) -> (x2, y2)
-            vertices.push(
-                xt0, yt0, u0, v0,
-                xt1, yt1, u1, v1,
-                xt2, yt2, u2, v2,
-            );
+            if (isTextured && !isWireFrame) {
+                // Primeiro triângulo (x0, y0) -> (x1, y1) -> (x2, y2)
+                vertices.push(
+                    xt0, yt0, u0, v0,
+                    xt1, yt1, u1, v1,
+                    xt2, yt2, u2, v2,
+                );
 
-            // Segundo triângulo (x1, y1) -> (x3, y3) -> (x2, y2)
-            vertices.push(
-                xt1, yt1, u1, v1,
-                xt3, yt3, u3, v3,
-                xt2, yt2, u2, v2,
-            );
+                // Segundo triângulo (x1, y1) -> (x3, y3) -> (x2, y2)
+                vertices.push(
+                    xt1, yt1, u1, v1,
+                    xt3, yt3, u3, v3,
+                    xt2, yt2, u2, v2,
+                );
+            } if (!isTextured && !isWireFrame) {
+                // Primeiro triângulo (x0, y0) -> (x1, y1) -> (x2, y2)
+                vertices.push(
+                    xt0, yt0,
+                    xt1, yt1,
+                    xt2, yt2,
+                );
 
-            // // Wireframe
-            // vertices.push(
-            //     xt0, yt0, u0, v0,
-            //     xt2, yt2, u2, v2,
+                // Segundo triângulo (x1, y1) -> (x3, y3) -> (x2, y2)
+                vertices.push(
+                    xt1, yt1,
+                    xt3, yt3,
+                    xt2, yt2,
+                );
+            }
 
-            //     xt2, yt2, u2, v2,
-            //     xt3, yt3, u3, v3,
+            if (isTextured && isWireFrame) {
+                // Wireframe
+                vertices.push(
+                    xt0, yt0, u0, v0,
+                    xt2, yt2, u2, v2,
 
-            //     xt3, yt3, u3, v3,
-            //     xt1, yt1, u1, v1,
+                    xt2, yt2, u2, v2,
+                    xt3, yt3, u3, v3,
 
-            //     xt1, yt1, u1, v1,
-            //     xt0, yt0, u0, v0,
+                    xt3, yt3, u3, v3,
+                    xt1, yt1, u1, v1,
 
-            //     xt0, yt0, u0, v0,
-            //     xt3, yt3, u3, v3,
-            // );
+                    xt1, yt1, u1, v1,
+                    xt0, yt0, u0, v0,
+
+                    xt0, yt0, u0, v0,
+                    xt3, yt3, u3, v3,
+                );
+            }
+            if (!isTextured && isWireFrame) {
+                // Wireframe
+                vertices.push(
+                    xt0, yt0,
+                    xt2, yt2,
+                    xt2, yt2,
+                    xt3, yt3,
+                    xt3, yt3,
+                    xt1, yt1,
+                    xt1, yt1,
+                    xt0, yt0,
+                );
+                // vertices.push(
+                //     xt0, yt0,
+                //     xt2, yt2,
+                //     xt2, yt2,
+                //     xt3, yt3,
+                //     xt3, yt3,
+                //     xt1, yt1,
+                //     xt1, yt1,
+                //     xt0, yt0,
+                //     xt0, yt0,
+                //     xt3, yt3,
+                // );
+            }
         }
     }
 
