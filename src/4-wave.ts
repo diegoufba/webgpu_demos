@@ -49,7 +49,8 @@ async function main() {
 
     //Set Vertex Buffer ******************************************************************************
     const size = 100
-    const vertices = createPlane(true,false,size, size, 2)
+    // const vertices = createPlane(true,false,size, size, 2)
+    const vertices = createPlane(size,2)
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
         label: 'Triangle vertices',
@@ -154,7 +155,7 @@ async function main() {
             }]
         },
         primitive: {
-            topology: 'triangle-list'
+            topology:'triangle-list'
             // topology: 'line-list'
             // topology: 'point-list'
         }
@@ -200,7 +201,7 @@ async function main() {
 
     //Gui ********************************************************************************************
     var gui = new dat.GUI();
-    gui.domElement.style.marginTop = "100px";
+    gui.domElement.style.marginTop = "10px";
     gui.domElement.id = "datGUI";
     var options = {
         speed: 2,

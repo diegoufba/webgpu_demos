@@ -13,8 +13,8 @@ export const getTexture = async (location: string, device: GPUDevice) => {
     })
 
     device.queue.copyExternalImageToTexture(
-        { source },
-        // { source, flipY: true },
+        // { source },
+        { source, flipY: true },
         { texture },
         { width: source.width, height: source.height }
     )

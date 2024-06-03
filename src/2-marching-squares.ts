@@ -265,7 +265,7 @@ async function main() {
     type Shape = 'star' | 'infinity' | 'circle' | 'heart';
 
     let gui = new dat.GUI();
-    gui.domElement.style.marginTop = "100px";
+    gui.domElement.style.marginTop = "10px";
     gui.domElement.id = "datGUI";
 
     let options = {

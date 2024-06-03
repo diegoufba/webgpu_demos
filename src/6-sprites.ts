@@ -2,9 +2,11 @@
 import { mat4, Mat4, vec3 } from 'wgpu-matrix'
 import sprite from './6-sprites.wgsl'
 import { updateArcRotateCamera, getArcRotateCamera, getProjectionMatrix } from './utils/matrix'
-import { setupResizeObserver } from './utils/utils'
+import { getTexture, setupResizeObserver } from './utils/utils'
 import { initializeWebGPU } from './utils/webgpuInit'
-import { getReferencePlane, updateMatrix } from './reference/plane'
+import { createPlane } from './meshes/plane'
+import { createMesh, updateMatrix } from './meshes/create-mesh'
+import * as dat from 'dat.gui';
 
 async function main() {
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -15,7 +17,7 @@ async function main() {
 
     let modelMatrix = mat4.identity()
     // modelMatrix = mat4.rotateX(modelMatrix, toRadians(60))
-    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(1 / 4, 1 / 4, 1))
+    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(1 / 8, 1 / 8, 1))
     modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(0, 1, 0))
 
     let viewMatrix = getArcRotateCamera()
@@ -36,18 +38,35 @@ async function main() {
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
 
     //************************************************************************************************
+    const spriteBufferArray = new Uint32Array([1])
+    const spriteBuffer: GPUBuffer = device.createBuffer({
+        label: 'Sprite Buffer',
+        size: spriteBufferArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+    device.queue.writeBuffer(spriteBuffer, 0, spriteBufferArray)
 
-    const { pipelinePlane, bindGroupPlane, vertexBufferPlane, vertexCountPlane, modelMatrixPlane, matrixBufferArrayPlane, matrixBufferPlane } = getReferencePlane(device, canvasFormat, projectionMatrix, viewMatrix)
+    const nVertices = 100
+    const size = nVertices / 4
+    const planeVertices = createPlane(nVertices, size, false)
+
+    const configureDepthStencil = true
+
+    const { pipelineMesh, bindGroupMesh, vertexBufferMesh, nDrawMesh, modelMatrixMesh, matrixBufferArrayMesh, matrixBufferMesh } =
+        createMesh(device, canvasFormat, projectionMatrix, viewMatrix, planeVertices, -Math.PI / 2, 'point-list', configureDepthStencil)
+
 
     const vertices = new Float32Array([
-        -1, -1,
-        1, -1,
-        1, 1,
+        // x, y, u, v
+        -1, -1, 0, 0,
+        1, -1, 1, 0,
+        1, 1, 1, 1,
 
-        1, 1,
-        -1, 1,
-        -1, -1
-    ])
+        1, 1, 1, 1,
+        -1, 1, 0, 1,
+        -1, -1, 0, 0
+    ]);
+
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
         label: ' vertices',
@@ -58,15 +77,20 @@ async function main() {
     device.queue.writeBuffer(vertexBuffer, 0, vertices)
 
     const vertexBufferLayout: GPUVertexBufferLayout = {
-        arrayStride: 8,
+        arrayStride: 16,
         attributes: [{
             format: "float32x2",
             offset: 0,
             shaderLocation: 0,
-        }]
+        }, {
+            format: "float32x2",
+            offset: 8,
+            shaderLocation: 1
+        }
+        ]
     }
 
-    const numberOfQuads = 30
+    const numberOfQuads = 100
     const quadInstanceArray = new Float32Array(numberOfQuads * 3)
     const quadInstaceBuffer = device.createBuffer({
         label: 'Quad Instaces Buffer',
@@ -74,13 +98,21 @@ async function main() {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
     })
 
+    const k = 40
+
     for (let i = 0; i < numberOfQuads; i++) {
-        quadInstanceArray[i * 3 + 0] = (Math.random() * 40) - 20
-        quadInstanceArray[i * 3 + 1] = Math.random() * 10
-        quadInstanceArray[i * 3 + 2] = (Math.random() * 10) -5
+        quadInstanceArray[i * 3 + 0] = Math.random() * k - k / 2
+        quadInstanceArray[i * 3 + 1] = Math.random() * k / 2 - k / 4
+        quadInstanceArray[i * 3 + 2] = Math.random() * k / 8 - k / 16
     }
+
     device.queue.writeBuffer(quadInstaceBuffer, 0, quadInstanceArray)
 
+    const texture = await getTexture("/webgpu_demos/star.png", device)
+
+    const sampler = device.createSampler({
+        magFilter: 'nearest'
+    })
 
     const shaderModule: GPUShaderModule = device.createShaderModule({
         label: 'Shader',
@@ -100,6 +132,21 @@ async function main() {
                 visibility: GPUShaderStage.VERTEX,
                 buffer: { type: 'read-only-storage' }
             },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.FRAGMENT,
+                sampler: {}
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {}
+            },
+            {
+                binding: 4,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: { type: 'uniform' }
+            }
         ]
     })
 
@@ -113,6 +160,18 @@ async function main() {
         {
             binding: 1,
             resource: { buffer: quadInstaceBuffer }
+        },
+        {
+            binding: 2,
+            resource: sampler
+        },
+        {
+            binding: 3,
+            resource: texture.createView()
+        },
+        {
+            binding: 4,
+            resource: { buffer: spriteBuffer }
         }
         ]
     })
@@ -122,7 +181,7 @@ async function main() {
         bindGroupLayouts: [bindGroupLayout]
     })
 
-    const pipeline: GPURenderPipeline = device.createRenderPipeline({
+    const pipelineDescriptor: GPURenderPipelineDescriptor = {
         label: 'pipeline',
         layout: pipelineLayout,
         vertex: {
@@ -134,58 +193,79 @@ async function main() {
             module: shaderModule,
             entryPoint: 'fragmentMain',
             targets: [{
-                format: canvasFormat
+                format: canvasFormat,
+                blend: {
+                    color: {
+                        srcFactor: 'one',
+                        dstFactor: 'one-minus-src-alpha',
+                        operation: 'add'
+                    },
+                    alpha: {
+                        srcFactor: 'one',
+                        dstFactor: 'one-minus-src-alpha',
+                        operation: 'add'
+                    }
+                }
             }]
         },
-        depthStencil: {
+        primitive: {
+            topology: 'triangle-list'
+            // topology: 'line-list'
+            // topology: 'point-list'
+        },
+    }
+    if (configureDepthStencil) {
+        pipelineDescriptor.depthStencil = {
             depthWriteEnabled: true,
             depthCompare: 'less',
             format: 'depth24plus'
-        }
-        // primitive: {
-        //     topology: 'line-list'
-        //     // topology: 'point-list'
-        // }
-    })
+        };
+    }
 
-    
+    const pipeline: GPURenderPipeline = device.createRenderPipeline(pipelineDescriptor)
+
+
     function render() {
         const depthTexture = device.createTexture({
             size: [canvas.width, canvas.height, 1],
             format: "depth24plus",
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         })
-        
+
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
                 view: textureView,
                 loadOp: 'clear',
+                // clearValue: { r: 1, g: 1, b: 1, a: 1 },
                 clearValue: { r: 0.2, g: 0.2, b: 0.298, a: 1 },
                 storeOp: 'store'
-            }],
-            depthStencilAttachment: {
+            }]
+        }
+
+        if (configureDepthStencil) {
+            renderPassDescriptor.depthStencilAttachment = {
                 view: depthTexture.createView(),
                 depthClearValue: 1.0,
                 depthLoadOp: 'clear',
                 depthStoreOp: "store"
-            }
+            };
         }
         const pass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
 
         // Primeiro pipeline draw plane
-        updateMatrix(modelMatrixPlane, viewMatrix, projectionMatrix, matrixBufferArrayPlane, matrixBufferPlane, device)
-        pass.setPipeline(pipelinePlane)
-        pass.setBindGroup(0, bindGroupPlane)
-        pass.setVertexBuffer(0, vertexBufferPlane)
-        pass.draw(vertexCountPlane)
+        updateMatrix(modelMatrixMesh, viewMatrix, projectionMatrix, matrixBufferArrayMesh, matrixBufferMesh, device)
+        pass.setPipeline(pipelineMesh)
+        pass.setBindGroup(0, bindGroupMesh)
+        pass.setVertexBuffer(0, vertexBufferMesh)
+        pass.draw(nDrawMesh)
 
         // Segundo pipeline draw squad
         pass.setPipeline(pipeline)
         pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
-        pass.draw(vertices.length / 2, numberOfQuads)
+        pass.draw(vertices.length / 4, numberOfQuads)
 
 
         pass.end()
@@ -193,6 +273,20 @@ async function main() {
     }
 
     render()
+
+    var gui = new dat.GUI();
+    gui.domElement.style.marginTop = "10px";
+    gui.domElement.id = "datGUI";
+    var options = {
+        billboard: true
+    }
+
+    gui.add(options, "billboard").onChange(function (value) {
+        spriteBufferArray[0] = value ? 1 : 0
+        device.queue.writeBuffer(spriteBuffer, 0, spriteBufferArray)
+        render()
+    })
+
 
     const updateViewMatrix = (newMatrix: Mat4) => {
         viewMatrix = newMatrix
