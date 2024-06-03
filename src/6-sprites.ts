@@ -9,6 +9,8 @@ import { createMesh, updateMatrix } from './meshes/create-mesh'
 import * as dat from 'dat.gui';
 
 async function main() {
+    const configureDepthStencil = true
+
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 
     const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
@@ -16,10 +18,9 @@ async function main() {
     let projectionMatrix = getProjectionMatrix(aspectRatio)
 
     let modelMatrix = mat4.identity()
-    // modelMatrix = mat4.rotateX(modelMatrix, toRadians(60))
     modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(1 / 8, 1 / 8, 1))
     modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(0, 1, 0))
-
+    
     let viewMatrix = getArcRotateCamera()
 
     //Set Uniform Buffer *****************************************************************************
@@ -50,7 +51,7 @@ async function main() {
     const size = nVertices / 4
     const planeVertices = createPlane(nVertices, size, false)
 
-    const configureDepthStencil = true
+    
 
     const { pipelineMesh, bindGroupMesh, vertexBufferMesh, nDrawMesh, modelMatrixMesh, matrixBufferArrayMesh, matrixBufferMesh } =
         createMesh(device, canvasFormat, projectionMatrix, viewMatrix, planeVertices, -Math.PI / 2, 'point-list', configureDepthStencil)
