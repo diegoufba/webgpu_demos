@@ -79,17 +79,6 @@ fn functionValue(p: vec2f, selector: u32) -> f32 {
         }
     }
 }
-fn circle(x: f32, y: f32) -> f32 {
-    var xc: f32 = 1.0;
-    var yc: f32 = 1.0;
-
-    let xp = x - xc;
-    let yp = y - yc;
-
-    let rCircle: f32 = 1.0 - 0.1; // Ajuste de raio
-    let fCircle = pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCircle, 2.0);
-    return fCircle;
-}
 
 fn interpolatedPoints(p1: vec2f, p2: vec2f, fp1: f32, fp2: f32) -> vec2f {
     let t = fp1 / (fp1 - fp2);

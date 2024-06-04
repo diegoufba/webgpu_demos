@@ -55,7 +55,7 @@ async function main() {
 
     const indexBuffer: GPUBuffer = device.createBuffer({
         label:'Index Buffer',
-        size:vertices.byteLength,
+        size:cubeVertexArrayUvIndexData.byteLength,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
     })
 

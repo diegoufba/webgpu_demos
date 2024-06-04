@@ -2,9 +2,10 @@ import compute from './5-compute.wgsl'
 import shader from './5-shader.wgsl'
 import * as dat from 'dat.gui';
 import { initializeWebGPU } from './utils/webgpuInit';
-import { getProjectionMatrix, getViewMatrix } from './utils/matrix';
+import { getArcRotateCamera, getProjectionMatrix, updateArcRotateCamera } from './utils/matrix';
 import { Mat4, mat4, vec3 } from 'wgpu-matrix';
 import { setupResizeObserver } from './utils/utils';
+import { getEdgeTable, triTable } from './5-tables';
 
 async function main() {
 
@@ -13,10 +14,11 @@ async function main() {
     const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
     let projectionMatrix = getProjectionMatrix(aspectRatio)
-    let viewMatrix = getViewMatrix()
+    // let viewMatrix = getViewMatrix()
+    let viewMatrix = getArcRotateCamera()
 
     let modelMatrix = mat4.identity()
-    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(2, 2, 1))
+    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(4, 4, 1))
     modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, 0))
 
     //Set Uniform Buffer *****************************************************************************
@@ -35,16 +37,21 @@ async function main() {
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
     //************************************************************************************************
 
-    let gridSize: number = 200 // grid = gridSize x gridSize
-    let sideLength: number = 2 / gridSize //square side lenght
+    const side = 2;
+    let gridSize: number = 50 // grid = gridSize x gridSize
+    let sideLength: number = side / gridSize //square side lenght
+    let interpolation: number = 1
     let shape: number = 1
 
-    const paramsArrayBuffer = new ArrayBuffer(12) // 2 u32 e 2 f32
+    let topology: GPUPrimitiveTopology = 'line-list'
+
+    const paramsArrayBuffer = new ArrayBuffer(16) // 2 u32 e 2 f32
     const paramsUint32View = new Uint32Array(paramsArrayBuffer)
     const paramsFloat32View = new Float32Array(paramsArrayBuffer)
     paramsUint32View[0] = shape
     paramsUint32View[1] = gridSize
-    paramsFloat32View[2] = sideLength
+    paramsUint32View[2] = interpolation
+    paramsFloat32View[3] = sideLength
 
     const paramsBuffer: GPUBuffer = device.createBuffer({
         label: 'Params buffer',
@@ -55,12 +62,33 @@ async function main() {
 
     function updateParamsBuffer() {
         // resolution = Math.min(width, height) // pixels resolution x resolution
-        sideLength = 2 / gridSize //square side lenght
+        sideLength = side / gridSize //square side lenght
         paramsUint32View[0] = shape
         paramsUint32View[1] = gridSize
-        paramsFloat32View[2] = sideLength
+        paramsUint32View[2] = interpolation
+        paramsFloat32View[3] = sideLength
         device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
     }
+
+    const edgeTableArray = new Int32Array(getEdgeTable().flat())
+
+    const edgeTableBuffer: GPUBuffer = device.createBuffer({
+        label: 'Tritable Buffer',
+        size: edgeTableArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+
+    device.queue.writeBuffer(edgeTableBuffer, 0, edgeTableArray)
+
+    const triTableArray = new Int32Array(triTable.flat())
+
+    const triTableBuffer: GPUBuffer = device.createBuffer({
+        label: 'Tritable Buffer',
+        size: triTableArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+
+    device.queue.writeBuffer(triTableBuffer, 0, triTableArray)
 
     const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
         label: 'Bind Group Layout',
@@ -81,42 +109,42 @@ async function main() {
         },
         {
             binding: 3,
-            visibility: GPUShaderStage.VERTEX,
+            visibility: GPUShaderStage.COMPUTE,
             buffer: { type: 'uniform' }
         },
+        {
+            binding: 4,
+            visibility: GPUShaderStage.COMPUTE,
+            buffer: { type: 'uniform' }
+        },
+        {
+            binding: 5,
+            visibility: GPUShaderStage.VERTEX,
+            buffer: { type: 'uniform' }
+        }
         ]
     })
 
     let pointsBuffer: GPUBuffer[]
-    // let readPointsBuffer: GPUBuffer
     let bindGroup: GPUBindGroup[]
     let points: Float32Array
 
     function createPointsBuffer() {
-        points = new Float32Array(gridSize * gridSize * 4 * 2)
+        points = new Float32Array(gridSize * gridSize * gridSize * 12 * 4) // 12 vec3, cada um ocupa 4 espacoes devido ao pad
 
         pointsBuffer = [
             device.createBuffer({
                 label: 'Points vertices A',
                 size: points.byteLength,
                 usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-                // usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
             }),
             device.createBuffer({
                 label: 'Points vertices B',
                 size: points.byteLength,
                 usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-                // usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
             })
         ]
 
-        // // Buffer usado para devolver os pontos para a cpu (opcional)
-        // readPointsBuffer = device.createBuffer({
-        //     label: "Read Points",
-        //     size: points.length,
-        //     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
-        // })
-        // //************************************************* ******/
 
         bindGroup = [
             device.createBindGroup({
@@ -136,8 +164,16 @@ async function main() {
                 },
                 {
                     binding: 3,
-                    resource: { buffer: matrixBuffer }
+                    resource: { buffer: edgeTableBuffer }
                 },
+                {
+                    binding: 4,
+                    resource: { buffer: triTableBuffer }
+                },
+                {
+                    binding: 5,
+                    resource: { buffer: matrixBuffer }
+                }
                 ]
             }),
             device.createBindGroup({
@@ -157,8 +193,16 @@ async function main() {
                 },
                 {
                     binding: 3,
-                    resource: { buffer: matrixBuffer }
+                    resource: { buffer: edgeTableBuffer }
                 },
+                {
+                    binding: 4,
+                    resource: { buffer: triTableBuffer }
+                },
+                {
+                    binding: 5,
+                    resource: { buffer: matrixBuffer }
+                }
                 ]
             })
         ]
@@ -179,7 +223,7 @@ async function main() {
         code: compute
     })
 
-    const shaderPipeline: GPURenderPipeline = device.createRenderPipeline({
+    const shaderPipelineDescriptor: GPURenderPipelineDescriptor = {
         label: 'Shader pipeline',
         layout: pipelineLayout,
         vertex: {
@@ -194,10 +238,12 @@ async function main() {
             }]
         },
         primitive: {
-            topology: 'line-list'
+            topology: topology
             // topology: 'point-list'
         }
-    })
+    }
+
+    let shaderPipeline: GPURenderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
 
     const simulationPipeline: GPUComputePipeline = device.createComputePipeline({
         label: 'Compute pipeline',
@@ -215,10 +261,9 @@ async function main() {
         const computePass = encoder.beginComputePass()
         computePass.setPipeline(simulationPipeline)
         computePass.setBindGroup(0, bindGroup[0])
-        computePass.dispatchWorkgroups(gridSize / 8, gridSize / 8)
+        computePass.dispatchWorkgroups(gridSize / 4, gridSize / 4, gridSize / 4)
         computePass.end()
 
-        // encoder.copyBufferToBuffer(pointsBuffer[1], 0, readPointsBuffer, 0, (gridSize * gridSize * 4 * 2))
 
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -237,18 +282,6 @@ async function main() {
         renderPass.draw(points.length / 2)
         renderPass.end()
         device.queue.submit([encoder.finish()])
-
-        // await Promise.all([
-        //     readPointsBuffer.mapAsync(GPUMapMode.READ),
-        // ]);
-        // const read = new Float32Array(readPointsBuffer.getMappedRange())
-        // const p:number[] = []
-        // read.forEach(element => {
-        //     if (element != 0) {
-        //         p.push(element)
-        //     }
-        // });
-        // console.log(p)
     }
 
     render()
@@ -270,22 +303,44 @@ async function main() {
 
     let options = {
         gridSize: gridSize,
-        shape: 'star' as Shape
+        shape: 'circle' as Shape,
+        interpolation: true,
+        points: false,
     };
 
     const shapes: Shape[] = ['star', 'infinity', 'circle', 'heart'];
 
-    gui.add(options, "shape", shapes).onFinishChange((value: Shape) => {
+    gui.add(options, "shape", shapes).onChange((value: Shape) => {
         shape = shapeMap[value];
         updateParamsBuffer()
         render()
     });
 
-    gui.add(options, "gridSize", 10, 2000, 10).onFinishChange((value) => {
+    gui.add(options, "gridSize", 10, 80, 10).onChange((value) => {
         gridSize = value;
         updateParamsBuffer()
         render()
     });
+
+    gui.add(options, "interpolation").onChange((value) => {
+        interpolation = value ? 1 : 0;
+        updateParamsBuffer()
+        render()
+    })
+    gui.add(options, "points").onChange((value) => {
+        topology = value ? 'point-list' : 'line-list';
+        updateParamsBuffer()
+        shaderPipelineDescriptor.primitive = { topology: topology }
+        shaderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
+        render()
+    })
+
+    const updateViewMatrix = (newMatrix: Mat4) => {
+        viewMatrix = newMatrix
+    }
+
+    // update camera on mouse move
+    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render, updateViewMatrix)
 
     const updateProjectionMatrix = (newMatrix: Mat4) => {
         projectionMatrix = newMatrix;
