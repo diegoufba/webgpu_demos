@@ -85,12 +85,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let pos: u32 = depth * (params.gridSize * params.gridSize) + row * params.gridSize + col;
     let nulo = vec3<f32>(0.0, 0.0, 0.0);
 
-    var a: vec3<f32> = nulo;
-    var b: vec3<f32> = nulo;
-    var c: vec3<f32> = nulo;
-    var d: vec3<f32> = nulo;
-
-
     let p3: vec3f = vec3f(x, y, z);
     let p2: vec3f = vec3f(x + params.sideLength, y, z);
     let p6: vec3f = vec3f(x + params.sideLength, y + params.sideLength, z);
@@ -131,93 +125,30 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     let points = array<vec3f,12>(e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11);
 
-    // if params.interpolation == 0 {
-    //     a = interpolatedPoints(p1, p2, fp1, fp2);
-    //     b = interpolatedPoints(p2, p3, fp2, fp3);
-    //     c = interpolatedPoints(p3, p4, fp3, fp4);
-    //     d = interpolatedPoints(p4, p1, fp4, fp1);
-    // } else {
-    //     a = vec2<f32>(x + params.sideLength * 0.5, y);
-    //     b = vec2<f32>(x + params.sideLength, y + params.sideLength * 0.5);
-    //     c = vec2<f32>(x + params.sideLength * 0.5, y + params.sideLength);
-    //     d = vec2<f32>(x, y + params.sideLength * 0.5);
-    // }
+    let test = array<vec3f,12>(p0, p1, p2, p3, p4, p5, p6, p7, nulo, nulo, nulo, nulo);
 
 
     let state: f32 = getState(fp0, fp1, fp2, fp3, fp4, fp5, fp6, fp7);
     let triTableA: vec4i = triTable[u32(state * 3 + 0)];
     let triTableB: vec4i = triTable[u32(state * 3 + 1)];
     let triTableC: vec4i = triTable[u32(state * 3 + 2)];
+    let triTableComplete = array<i32,12>(
+        triTableA[0], triTableA[1], triTableA[2], triTableA[3],
+        triTableB[0], triTableB[1], triTableB[2], triTableB[3],
+        triTableC[0], triTableC[1], triTableC[2], triTableC[3]
+    );
 
+    // for (var i = 0; i < 12; i++) {
+    //     point[pos * 12 + u32(i)] = test[i];
+    // }
 
-    let ta0 = triTableA[0];
-    if ta0 != -1 {
-        point[pos * 12 + 0] = points[ta0];
+    for (var i = 0; i < 12; i++) {
+        let t = triTableComplete[i];
+        if t != -1 {
+            point[pos * 12 + u32(i)] = points[t];
+        }
+        else {
+            point[pos * 12 + u32(i)] = nulo;
+        }
     }
-
-    let ta1 = triTableA[1];
-    if ta1 != -1 {
-        point[pos * 12 + 1] = points[ta1];
-    }
-
-    let ta2 = triTableA[2];
-    if ta2 != -1 {
-        point[pos * 12 + 2] = points[ta2];
-    }
-
-    let ta3 = triTableA[3];
-    if ta3 != -1 {
-        point[pos * 12 + 3] = points[ta3];
-    }
-
-
-    let ta4 = triTableB[0];
-    if ta4 != -1 {
-        point[pos * 12 + 4] = points[ta4];
-    }
-    let ta5 = triTableB[1];
-    if ta5 != -1 {
-        point[pos * 12 + 5] = points[ta5];
-    }
-    let ta6 = triTableB[2];
-    if ta6 != -1 {
-        point[pos * 12 + 6] = points[ta6];
-    }
-    let ta7 = triTableB[3];
-    if ta7 != -1 {
-        point[pos * 12 + 7] = points[ta7];
-    }
-
-
-    let ta8 = triTableC[0];
-    if ta8 != -1 {
-        point[pos * 12 + 8] = points[ta8];
-    }
-    let ta9 = triTableC[1];
-    if ta9 != -1 {
-        point[pos * 12 + 9] = points[ta9];
-    }
-    let ta10 = triTableC[2];
-    if ta10 != -1 {
-        point[pos * 12 + 10] = points[ta10];
-    }
-    let ta11 = triTableC[3];
-    if ta11 != -1 {
-        point[pos * 12 + 11] = points[ta11];
-    }
-
-    // point[pos * 12 + 0] = select(nulo, points[0], triTableA[0] != -1);
-    // point[pos * 12 + 1] = select(nulo, points[1], triTableA[1] != -1);
-    // point[pos * 12 + 2] = select(nulo, points[2], triTableA[2] != -1);
-    // point[pos * 12 + 3] = select(nulo, points[3], triTableA[3] != -1);
-
-    // point[pos * 12 + 4] = select(nulo, points[4], triTableB[0] != -1);
-    // point[pos * 12 + 5] = select(nulo, points[5], triTableB[1] != -1);
-    // point[pos * 12 + 6] = select(nulo, points[6], triTableB[2] != -1);
-    // point[pos * 12 + 7] = select(nulo, points[7], triTableB[3] != -1);
-
-    // point[pos * 12 + 8] = select(nulo, points[8], triTableC[0] != -1);
-    // point[pos * 12 + 9] = select(nulo, points[9], triTableC[1] != -1);
-    // point[pos * 12 + 10] = select(nulo, points[10], triTableC[2] != -1);
-    // point[pos * 12 + 11] = select(nulo, points[11], triTableC[3] != -1);
 }

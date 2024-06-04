@@ -6,8 +6,11 @@ import { getArcRotateCamera, getProjectionMatrix, updateArcRotateCamera } from '
 import { Mat4, mat4, vec3 } from 'wgpu-matrix';
 import { setupResizeObserver } from './utils/utils';
 import { getEdgeTable, triTable } from './5-tables';
+import Stats from 'stats.js';
 
 async function main() {
+
+    const configureDepthStencil = true
 
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 
@@ -43,7 +46,7 @@ async function main() {
     let interpolation: number = 1
     let shape: number = 1
 
-    let topology: GPUPrimitiveTopology = 'line-list'
+    let topology: GPUPrimitiveTopology = 'triangle-list'
 
     const paramsArrayBuffer = new ArrayBuffer(16) // 2 u32 e 2 f32
     const paramsUint32View = new Uint32Array(paramsArrayBuffer)
@@ -242,6 +245,13 @@ async function main() {
             // topology: 'point-list'
         }
     }
+    if (configureDepthStencil) {
+        shaderPipelineDescriptor.depthStencil = {
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus'
+        };
+    }
 
     let shaderPipeline: GPURenderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
 
@@ -255,6 +265,11 @@ async function main() {
     })
 
     async function render() {
+        const depthTexture = device.createTexture({
+            size: [canvas.width, canvas.height],
+            format: "depth24plus",
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        })
         createPointsBuffer()
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
 
@@ -274,6 +289,14 @@ async function main() {
                 // clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1 },
                 storeOp: 'store'
             }]
+        }
+        if (configureDepthStencil) {
+            renderPassDescriptor.depthStencilAttachment = {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: "store"
+            };
         }
 
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
@@ -349,6 +372,19 @@ async function main() {
     setupResizeObserver(canvas, device, matrixBuffer, matrixBufferArray, getProjectionMatrix, render, updateProjectionMatrix);
 
     //*********************************************************************************************************
+
+    var stats = new Stats();
+    stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+    document.body.appendChild(stats.dom);
+
+    function animate() {
+        stats.begin();
+        // monitored code goes here
+        stats.end();
+        requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
 }
 
 main()
