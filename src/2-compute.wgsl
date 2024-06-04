@@ -1,14 +1,43 @@
 struct Params {
     shape: u32,
     gridSize: u32,
+    interpolation: u32,
     sideLength: f32
   };
 
-fn getState(a: f32, b: f32, c: f32, d: f32) -> f32 {
+fn getState(fp1: f32, fp2: f32, fp3: f32, fp4: f32) -> f32 {
+    var a: f32;
+    var b: f32;
+    var c: f32;
+    var d: f32;
+
+    if fp1 <= 0.0 {
+        a = 1.0;
+    } else {
+        a = 0.0;
+    }
+    if fp2 <= 0.0 {
+        b = 1;
+    } else {
+        b = 0.0;
+    }
+    if fp3 <= 0.0 {
+        c = 1;
+    } else {
+        c = 0.0;
+    }
+    if fp4 <= 0.0 {
+        d = 1;
+    } else {
+        d = 0.0;
+    }
+
     return a * 8 + b * 4 + c * 2 + d;
 }
 
-fn isInside(x: f32, y: f32, selector: u32) -> f32 {
+fn functionValue(p: vec2f, selector: u32) -> f32 {
+    let x = p.x;
+    let y = p.y;
     var xc: f32 = 1.0;
     var yc: f32 = 1.0;
 
@@ -23,49 +52,50 @@ fn isInside(x: f32, y: f32, selector: u32) -> f32 {
             let r = sqrt(xp * xp + yp * yp);
             let n: f32 = 10.0;
             let star_r = 0.5 + 0.25 * sin(n * theta);
-            if r <= star_r {
-                return 1.0;
-            } else {
-                return 0.0;
-            }
+            return r - star_r;
         }
         case 2: {
             // Função 2: Infinito
             let a: f32 = 0.5;
             let left = (xp * xp + yp * yp) * (xp * xp + yp * yp);
             let right = 2.0 * a * a * (xp * xp - yp * yp);
-            if left <= right {
-                return 1.0;
-            } else {
-                return 0.0;
-            }
+            return left - right;
         }
         case 3: {
             // Função 3: Círculo
             let rCircle: f32 = 1.0 - 0.1; // Ajuste de raio
             let fCircle = pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCircle, 2.0);
-            if fCircle <= 0.0 {
-                return 1.0;
-            } else {
-                return 0.0;
-            }
+            return fCircle;
         }
         case 4: {
             // Função 4: Coração
             let xpHeart = (x - xc) / 0.75;
             let ypHeart = (y - yc) / 0.75;
             let fHeart = pow(xpHeart * xpHeart + ypHeart * ypHeart - 1.0, 3.0) - xpHeart * xpHeart * pow(ypHeart, 3.0);
-            if fHeart <= 0.0 {
-                return 1.0;
-            } else {
-                return 0.0;
-            }
+            return fHeart;
         }
         default: {
-            // Retorno padrão se o seletor não corresponder a nenhuma função conhecida
-            return 0.0;
+            return 1.0;
         }
     }
+}
+fn circle(x: f32, y: f32) -> f32 {
+    var xc: f32 = 1.0;
+    var yc: f32 = 1.0;
+
+    let xp = x - xc;
+    let yp = y - yc;
+
+    let rCircle: f32 = 1.0 - 0.1; // Ajuste de raio
+    let fCircle = pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCircle, 2.0);
+    return fCircle;
+}
+
+fn interpolatedPoints(p1: vec2f, p2: vec2f, fp1: f32, fp2: f32) -> vec2f {
+    let t = fp1 / (fp1 - fp2);
+    let px = p1.x + t * (p2.x - p1.x);
+    let py = p1.y + t * (p2.y - p1.y);
+    return vec2f(px, py);
 }
 
 
@@ -90,16 +120,34 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var c: vec2<f32> = nulo;
     var d: vec2<f32> = nulo;
 
+    let p1: vec2f = vec2f(x, y);
+    let p2 = vec2f(x + params.sideLength, y);
+    let p3 = vec2f(x + params.sideLength, y + params.sideLength);
+    let p4 = vec2f(x, y + params.sideLength);
+
+    let fp1: f32 = functionValue(p1, params.shape);
+    let fp2: f32 = functionValue(p2, params.shape);
+    let fp3: f32 = functionValue(p3, params.shape);
+    let fp4: f32 = functionValue(p4, params.shape);
+
     let lastRowOrCol: bool = ((row == params.gridSize - 1) | (col == params.gridSize - 1));
 
-    if (!lastRowOrCol) {
-        a = vec2<f32>(x + params.sideLength * 0.5, y);
-        b = vec2<f32>(x + params.sideLength, y + params.sideLength * 0.5);
-        c = vec2<f32>(x + params.sideLength * 0.5, y + params.sideLength);
-        d = vec2<f32>(x, y + params.sideLength * 0.5);
+    if !lastRowOrCol {
+
+        if params.interpolation == 1 {
+            a = interpolatedPoints(p1, p2, fp1, fp2);
+            b = interpolatedPoints(p2, p3, fp2, fp3);
+            c = interpolatedPoints(p3, p4, fp3, fp4);
+            d = interpolatedPoints(p4, p1, fp4, fp1);
+        } else {
+            a = vec2<f32>(x + params.sideLength * 0.5, y);
+            b = vec2<f32>(x + params.sideLength, y + params.sideLength * 0.5);
+            c = vec2<f32>(x + params.sideLength * 0.5, y + params.sideLength);
+            d = vec2<f32>(x, y + params.sideLength * 0.5);
+        }
     }
 
-    let state: f32 = getState(isInside(x, y, params.shape), isInside(x + params.sideLength, y, params.shape), isInside(x + params.sideLength, y + params.sideLength, params.shape), isInside(x, y + params.sideLength, params.shape));
+    let state: f32 = getState(fp1, fp2, fp3, fp4);
 
     switch (u32(state)) {
         case 1,14: {

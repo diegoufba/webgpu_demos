@@ -7,8 +7,15 @@ export const initializeWebGPU = async (canvas: HTMLCanvasElement) => {
     if (!adapter) {
         throw new Error("No appropriate GPUAdapter found.")
     }
-
+    
     const device: GPUDevice = await adapter.requestDevice()
+
+    // const device: GPUDevice = await adapter.requestDevice({
+    //     requiredLimits: {
+    //         maxStorageBufferBindingSize: 4294967292,
+    //         maxBufferSize:4294967296
+    //     }
+    // })
 
     const context = canvas.getContext('webgpu')
     if (!context) {
@@ -26,7 +33,7 @@ export const initializeWebGPU = async (canvas: HTMLCanvasElement) => {
     canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
     canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
 
-    const aspectRatio = width/height
+    const aspectRatio = width / height
 
-    return {device,context,canvasFormat,aspectRatio}
+    return { device, context, canvasFormat, aspectRatio }
 } 

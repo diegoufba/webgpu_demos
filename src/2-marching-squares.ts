@@ -35,16 +35,21 @@ async function main() {
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
     //************************************************************************************************
 
+    const side = 2;
     let gridSize: number = 200 // grid = gridSize x gridSize
-    let sideLength: number = 2 / gridSize //square side lenght
+    let sideLength: number = side / gridSize //square side lenght
+    let interpolation: number = 1
     let shape: number = 1
 
-    const paramsArrayBuffer = new ArrayBuffer(12) // 2 u32 e 2 f32
+    let topology: GPUPrimitiveTopology = 'line-list'
+
+    const paramsArrayBuffer = new ArrayBuffer(16) // 2 u32 e 2 f32
     const paramsUint32View = new Uint32Array(paramsArrayBuffer)
     const paramsFloat32View = new Float32Array(paramsArrayBuffer)
     paramsUint32View[0] = shape
     paramsUint32View[1] = gridSize
-    paramsFloat32View[2] = sideLength
+    paramsUint32View[2] = interpolation
+    paramsFloat32View[3] = sideLength
 
     const paramsBuffer: GPUBuffer = device.createBuffer({
         label: 'Params buffer',
@@ -55,10 +60,11 @@ async function main() {
 
     function updateParamsBuffer() {
         // resolution = Math.min(width, height) // pixels resolution x resolution
-        sideLength = 2 / gridSize //square side lenght
+        sideLength = side / gridSize //square side lenght
         paramsUint32View[0] = shape
         paramsUint32View[1] = gridSize
-        paramsFloat32View[2] = sideLength
+        paramsUint32View[2] = interpolation
+        paramsFloat32View[3] = sideLength
         device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
     }
 
@@ -179,7 +185,7 @@ async function main() {
         code: compute
     })
 
-    const shaderPipeline: GPURenderPipeline = device.createRenderPipeline({
+    const shaderPipelineDescriptor: GPURenderPipelineDescriptor = {
         label: 'Shader pipeline',
         layout: pipelineLayout,
         vertex: {
@@ -194,10 +200,12 @@ async function main() {
             }]
         },
         primitive: {
-            topology: 'line-list'
+            topology: topology
             // topology: 'point-list'
         }
-    })
+    }
+
+    let shaderPipeline: GPURenderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
 
     const simulationPipeline: GPUComputePipeline = device.createComputePipeline({
         label: 'Compute pipeline',
@@ -270,22 +278,37 @@ async function main() {
 
     let options = {
         gridSize: gridSize,
-        shape: 'star' as Shape
+        shape: 'star' as Shape,
+        interpolation: true,
+        points: false,
     };
 
     const shapes: Shape[] = ['star', 'infinity', 'circle', 'heart'];
 
-    gui.add(options, "shape", shapes).onFinishChange((value: Shape) => {
+    gui.add(options, "shape", shapes).onChange((value: Shape) => {
         shape = shapeMap[value];
         updateParamsBuffer()
         render()
     });
 
-    gui.add(options, "gridSize", 10, 2000, 10).onFinishChange((value) => {
+    gui.add(options, "gridSize", 10, 800, 10).onChange((value) => {
         gridSize = value;
         updateParamsBuffer()
         render()
     });
+
+    gui.add(options, "interpolation").onChange((value) => {
+        interpolation = value ? 1 : 0;
+        updateParamsBuffer()
+        render()
+    })
+    gui.add(options, "points").onChange((value) => {
+        topology = value ? 'point-list' : 'line-list';
+        updateParamsBuffer()
+        shaderPipelineDescriptor.primitive = { topology: topology }
+        shaderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
+        render()
+    })
 
     const updateProjectionMatrix = (newMatrix: Mat4) => {
         projectionMatrix = newMatrix;

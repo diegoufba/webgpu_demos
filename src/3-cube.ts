@@ -96,20 +96,6 @@ async function main() {
         _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _,_,_,
 
     ].flat());
-    // const textureData = new Uint8Array([
-    //     _, _, _, d,   d, d, d, d,   d, d, d, d, _,_,_,_,
-    //     _, _, d, d,   _, _, _, d,   _, _, _, d, _,_,_,_,
-    //     _, d, _, d,   d, d, d, d,   _, d, d, d, _,_,_,_,
-    //     _, _, _, d,   d, _, _, _,   _, _, _, d, _,_,_,_,
-    //     _, _, _, d,   d, d, d, d,   d, d, d, d, _,_,_,_,
-
-    //     d, _, _, d,   d, d, d, d,   d, d, d, d, _,_,_,_,
-    //     d, _, _, d,   d, _, _, _,   d, _, _, _, _,_,_,_,
-    //     d, d, d, d,   d, d, d, d,   d, d, d, d, _,_,_,_,
-    //     _, _, _, d,   _, _, _, d,   d, _, _, d, _,_,_,_,
-    //     _, _, _, d,   d, d, d, d,   d, d, d, d, _,_,_,_,
-
-    // ].flat());
 
     const texture = device.createTexture({
         size: [kTextureWidth, kTextureHeight],
