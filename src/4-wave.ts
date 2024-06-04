@@ -1,7 +1,7 @@
 import { Mat4, mat4 } from 'wgpu-matrix';
 import wave from './4-wave.wgsl'
 import { createPlane } from './meshes/plane'
-import { getProjectionMatrix, getViewMatrix, toRadians } from './utils/matrix'
+import { getArcRotateCamera, getProjectionMatrix, toRadians, updateArcRotateCamera } from './utils/matrix'
 import { getTexture, setupResizeObserver } from './utils/utils'
 import { initializeWebGPU } from './utils/webgpuInit'
 import * as dat from 'dat.gui';
@@ -13,11 +13,11 @@ async function main() {
     const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
     let projectionMatrix = getProjectionMatrix(aspectRatio)
-    let viewMatrix = getViewMatrix()
+    let viewMatrix = getArcRotateCamera()
 
     let modelMatrix = mat4.identity()
     modelMatrix = mat4.rotateX(modelMatrix, toRadians(-60))
-    // model = mat4.scale(model, [1.5, 1.5, 1.5])
+    modelMatrix = mat4.scale(modelMatrix, [1.5, 1.5, 1.5])
     // model = mat4.rotateZ(model, rotation)
 
     //Set Uniform Buffer *****************************************************************************
@@ -226,6 +226,12 @@ async function main() {
     });
     //************************************************************************************************
 
+    const updateViewMatrix = (newMatrix: Mat4) => {
+        viewMatrix = newMatrix
+    }
+
+    // update camera on mouse move
+    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render, updateViewMatrix)
 
     const updateProjectionMatrix = (newMatrix: Mat4) => {
         projectionMatrix = newMatrix;

@@ -2,7 +2,7 @@ import compute from './2-compute.wgsl?raw'
 import shader from './2-shader.wgsl?raw'
 import * as dat from 'dat.gui';
 import { initializeWebGPU } from './utils/webgpuInit';
-import { getProjectionMatrix, getViewMatrix } from './utils/matrix';
+import { getArcRotateCamera, getProjectionMatrix, updateArcRotateCamera } from './utils/matrix';
 import { Mat4, mat4, vec3 } from 'wgpu-matrix';
 import { setupResizeObserver } from './utils/utils';
 
@@ -13,10 +13,11 @@ async function main() {
     const { device, context, canvasFormat, aspectRatio } = await initializeWebGPU(canvas)
 
     let projectionMatrix = getProjectionMatrix(aspectRatio)
-    let viewMatrix = getViewMatrix()
+    // let viewMatrix = getViewMatrix()
+    let viewMatrix = getArcRotateCamera()
 
     let modelMatrix = mat4.identity()
-    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(2, 2, 1))
+    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(4, 4, 1))
     modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, 0))
 
     //Set Uniform Buffer *****************************************************************************
@@ -291,7 +292,7 @@ async function main() {
         render()
     });
 
-    gui.add(options, "gridSize", 10, 800, 10).onChange((value) => {
+    gui.add(options, "gridSize", 10, 2000, 10).onChange((value) => {
         gridSize = value;
         updateParamsBuffer()
         render()
@@ -309,6 +310,13 @@ async function main() {
         shaderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
         render()
     })
+
+    const updateViewMatrix = (newMatrix: Mat4) => {
+        viewMatrix = newMatrix
+    }
+
+    // update camera on mouse move
+    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render, updateViewMatrix)
 
     const updateProjectionMatrix = (newMatrix: Mat4) => {
         projectionMatrix = newMatrix;
