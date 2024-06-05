@@ -122,13 +122,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     if params.interpolation == 1 {
         points[0] = interpolatedPoints(p0, p1, fp0, fp1);
-        points[1] = interpolatedPoints(p1, p2, fp1, fp2);
-        points[2] = interpolatedPoints(p2, p3, fp2, fp3);
-        points[3] = interpolatedPoints(p0, p3, fp0, fp3);
+        points[1] = interpolatedPoints(p2, p1, fp2, fp1);
+        points[2] = interpolatedPoints(p3, p2, fp3, fp2);
+        points[3] = interpolatedPoints(p3, p0, fp3, fp0);
         points[4] = interpolatedPoints(p4, p5, fp4, fp5);
-        points[5] = interpolatedPoints(p5, p6, fp5, fp6);
-        points[6] = interpolatedPoints(p6, p7, fp6, fp7);
-        points[7] = interpolatedPoints(p4, p7, fp4, fp7);
+        points[5] = interpolatedPoints(p6, p5, fp6, fp5);
+        points[6] = interpolatedPoints(p7, p6, fp7, fp6);
+        points[7] = interpolatedPoints(p7, p4, fp7, fp4);
         points[8] = interpolatedPoints(p0, p4, fp0, fp4);
         points[9] = interpolatedPoints(p1, p5, fp1, fp5);
         points[10] = interpolatedPoints(p2, p6, fp2, fp6);

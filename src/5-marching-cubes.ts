@@ -132,14 +132,14 @@ const main = async () => {
         }]
     })
 
-    let pointsBuffer: GPUBuffer
+    
     let bindGroupCompute: GPUBindGroup
     let bindGroupShader: GPUBindGroup
     let nPoints: number
 
     function updateSizePointsBuffer() {
         nPoints = gridSize * gridSize * gridSize * 15 * 3 // 15 Pontos por posica no grid
-        pointsBuffer = device.createBuffer({
+        let pointsBuffer: GPUBuffer = device.createBuffer({
             label: 'Points vertices A',
             size: nPoints * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -149,22 +149,22 @@ const main = async () => {
             label: 'Bind Group Compute',
             layout: bindGroupLayoutCompute,
             entries: [
-            {
-                binding: 1,
-                resource: { buffer: pointsBuffer },
-            },
-            {
-                binding: 2,
-                resource: { buffer: paramsBuffer },
-            },
-            {
-                binding: 3,
-                resource: { buffer: edgeTableBuffer }
-            },
-            {
-                binding: 4,
-                resource: { buffer: triTableBuffer }
-            },
+                {
+                    binding: 1,
+                    resource: { buffer: pointsBuffer },
+                },
+                {
+                    binding: 2,
+                    resource: { buffer: paramsBuffer },
+                },
+                {
+                    binding: 3,
+                    resource: { buffer: edgeTableBuffer }
+                },
+                {
+                    binding: 4,
+                    resource: { buffer: triTableBuffer }
+                },
             ]
         })
         bindGroupShader = device.createBindGroup({
@@ -180,7 +180,6 @@ const main = async () => {
             }
             ]
         })
-
     }
 
     const shaderPipelineLayout = device.createPipelineLayout({
