@@ -21,8 +21,8 @@ async function main() {
     let viewMatrix = getArcRotateCamera()
 
     let modelMatrix = mat4.identity()
-    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(4, 4, 1))
-    modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, 0))
+    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(4, 4, 4))
+    modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, -1))
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -133,7 +133,7 @@ async function main() {
     let points: Float32Array
 
     function createPointsBuffer() {
-        points = new Float32Array(gridSize * gridSize * gridSize * 12 * 4) // 12 vec3, cada um ocupa 4 espacoes devido ao pad
+        points = new Float32Array(gridSize * gridSize * gridSize * 15 * 3) // 15 Pontos por posica no grid
 
         pointsBuffer = [
             device.createBuffer({
@@ -302,7 +302,7 @@ async function main() {
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
         renderPass.setBindGroup(0, bindGroup[1])
-        renderPass.draw(points.length / 2)
+        renderPass.draw(points.length / 3)
         renderPass.end()
         device.queue.submit([encoder.finish()])
     }
@@ -312,13 +312,12 @@ async function main() {
     //*********************************************************************************************************
     // Gui
     const shapeMap = {
-        star: 1,
-        infinity: 2,
-        circle: 3,
-        heart: 4
+        sphere: 1,
+        cylinder: 2,
+        cone: 3,
     };
 
-    type Shape = 'star' | 'infinity' | 'circle' | 'heart';
+    type Shape = 'sphere' | 'cylinder' | 'cone' ;
 
     let gui = new dat.GUI();
     gui.domElement.style.marginTop = "10px";
@@ -326,12 +325,12 @@ async function main() {
 
     let options = {
         gridSize: gridSize,
-        shape: 'circle' as Shape,
+        shape: 'sphere' as Shape,
         interpolation: true,
         points: false,
     };
 
-    const shapes: Shape[] = ['star', 'infinity', 'circle', 'heart'];
+    const shapes: Shape[] = ['sphere', 'cylinder', 'cone'];
 
     gui.add(options, "shape", shapes).onChange((value: Shape) => {
         shape = shapeMap[value];
@@ -351,7 +350,7 @@ async function main() {
         render()
     })
     gui.add(options, "points").onChange((value) => {
-        topology = value ? 'point-list' : 'line-list';
+        topology = value ? 'point-list' : 'triangle-list';
         updateParamsBuffer()
         shaderPipelineDescriptor.primitive = { topology: topology }
         shaderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
