@@ -43,7 +43,7 @@ const main = async () => {
     const side = 2;
     let gridSize: number = 50 // grid = gridSize x gridSize
     let sideLength: number = side / gridSize //square side lenght
-    let interpolation: number = 1
+    let interpolation: number = 0
     let shape: number = 1
 
     let topology: GPUPrimitiveTopology = 'triangle-list'
@@ -132,14 +132,22 @@ const main = async () => {
         }]
     })
 
-    
+    let nPoints: number = gridSize * gridSize * gridSize * 15 * 3 
+    let pointsBuffer: GPUBuffer = device.createBuffer({
+        label: 'Points vertices A',
+        size: nPoints * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    })
+
     let bindGroupCompute: GPUBindGroup
     let bindGroupShader: GPUBindGroup
-    let nPoints: number
-
+    
     function updateSizePointsBuffer() {
+
+        pointsBuffer.destroy()
+
         nPoints = gridSize * gridSize * gridSize * 15 * 3 // 15 Pontos por posica no grid
-        let pointsBuffer: GPUBuffer = device.createBuffer({
+        pointsBuffer = device.createBuffer({
             label: 'Points vertices A',
             size: nPoints * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -253,12 +261,26 @@ const main = async () => {
         device.queue.submit([encoder.finish()])
     }
 
-    const render = async () => {
-        const depthTexture = device.createTexture({
+
+    const getDepthTexture = () => {
+        return device.createTexture({
             size: [canvas.width, canvas.height],
             format: "depth24plus",
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         })
+    }
+    let canvasWidth = canvas.width
+    let canvasHeight = canvas.height
+    let depthTexture: GPUTexture = getDepthTexture()
+
+
+    const render = async () => {
+        if (canvasWidth != canvas.width || canvasHeight != canvas.height) {
+            depthTexture.destroy()
+            depthTexture = getDepthTexture()
+            canvasWidth = canvas.width
+            canvasHeight = canvas.height
+        }
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -308,7 +330,7 @@ const main = async () => {
     let options = {
         gridSize: gridSize,
         shape: 'sphere' as Shape,
-        interpolation: true,
+        interpolation: false,
         points: false,
     };
 
