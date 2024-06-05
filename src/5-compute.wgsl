@@ -77,9 +77,6 @@ fn interpolatedPoints(p1: Point, p2: Point, fp1: f32, fp2: f32) -> Point {
     return Point(px, py, pz);
 }
 
-
-
-    @group(0) @binding(0) var<storage> pointRead: array<Point>;
     @group(0) @binding(1) var<storage,read_write> point: array<Point>;
     @group(0) @binding(2) var<uniform> params: Params;
     @group(0) @binding(3) var<uniform> edgeTable: array<vec4<i32>,768>;

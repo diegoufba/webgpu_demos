@@ -8,7 +8,7 @@ import { setupResizeObserver } from './utils/utils';
 import { getEdgeTable, triTable } from './5-tables';
 import Stats from 'stats.js';
 
-async function main() {
+const main = async () => {
 
     const configureDepthStencil = true
 
@@ -93,127 +93,104 @@ async function main() {
 
     device.queue.writeBuffer(triTableBuffer, 0, triTableArray)
 
-    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
-        label: 'Bind Group Layout',
+    const bindGroupLayoutCompute: GPUBindGroupLayout = device.createBindGroupLayout({
+        label: 'Bind Group Layout Compute',
+        entries: [
+            {
+                binding: 1,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'storage' }
+            },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'uniform' }
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'uniform' }
+            },
+            {
+                binding: 4,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'uniform' }
+            },
+        ]
+    })
+    const bindGroupLayoutShader: GPUBindGroupLayout = device.createBindGroupLayout({
+        label: 'Bind Group Layout Shader',
         entries: [{
             binding: 0,
-            visibility: GPUShaderStage.VERTEX | GPUShaderStage.COMPUTE,
+            visibility: GPUShaderStage.VERTEX,
             buffer: { type: 'read-only-storage' }
-        },
-        {
-            binding: 1,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'storage' }
-        },
-        {
-            binding: 2,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'uniform' }
-        },
-        {
-            binding: 3,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'uniform' }
-        },
-        {
-            binding: 4,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'uniform' }
         },
         {
             binding: 5,
             visibility: GPUShaderStage.VERTEX,
             buffer: { type: 'uniform' }
-        }
-        ]
+        }]
     })
 
-    let pointsBuffer: GPUBuffer[]
-    let bindGroup: GPUBindGroup[]
-    let points: Float32Array
+    let pointsBuffer: GPUBuffer
+    let bindGroupCompute: GPUBindGroup
+    let bindGroupShader: GPUBindGroup
+    let nPoints: number
 
-    function createPointsBuffer() {
-        points = new Float32Array(gridSize * gridSize * gridSize * 15 * 3) // 15 Pontos por posica no grid
+    function updateSizePointsBuffer() {
+        nPoints = gridSize * gridSize * gridSize * 15 * 3 // 15 Pontos por posica no grid
+        pointsBuffer = device.createBuffer({
+            label: 'Points vertices A',
+            size: nPoints * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        })
 
-        pointsBuffer = [
-            device.createBuffer({
-                label: 'Points vertices A',
-                size: points.byteLength,
-                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-            }),
-            device.createBuffer({
-                label: 'Points vertices B',
-                size: points.byteLength,
-                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-            })
-        ]
+        bindGroupCompute = device.createBindGroup({
+            label: 'Bind Group Compute',
+            layout: bindGroupLayoutCompute,
+            entries: [
+            {
+                binding: 1,
+                resource: { buffer: pointsBuffer },
+            },
+            {
+                binding: 2,
+                resource: { buffer: paramsBuffer },
+            },
+            {
+                binding: 3,
+                resource: { buffer: edgeTableBuffer }
+            },
+            {
+                binding: 4,
+                resource: { buffer: triTableBuffer }
+            },
+            ]
+        })
+        bindGroupShader = device.createBindGroup({
+            label: 'Bind Group Compute',
+            layout: bindGroupLayoutShader,
+            entries: [{
+                binding: 0,
+                resource: { buffer: pointsBuffer },
+            },
+            {
+                binding: 5,
+                resource: { buffer: matrixBuffer }
+            }
+            ]
+        })
 
-
-        bindGroup = [
-            device.createBindGroup({
-                label: 'Bind Group A',
-                layout: bindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: { buffer: pointsBuffer[0] },
-                },
-                {
-                    binding: 1,
-                    resource: { buffer: pointsBuffer[1] },
-                },
-                {
-                    binding: 2,
-                    resource: { buffer: paramsBuffer },
-                },
-                {
-                    binding: 3,
-                    resource: { buffer: edgeTableBuffer }
-                },
-                {
-                    binding: 4,
-                    resource: { buffer: triTableBuffer }
-                },
-                {
-                    binding: 5,
-                    resource: { buffer: matrixBuffer }
-                }
-                ]
-            }),
-            device.createBindGroup({
-                label: 'Bind Group B',
-                layout: bindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: { buffer: pointsBuffer[1] },
-                },
-                {
-                    binding: 1,
-                    resource: { buffer: pointsBuffer[0] },
-                },
-                {
-                    binding: 2,
-                    resource: { buffer: paramsBuffer },
-                },
-                {
-                    binding: 3,
-                    resource: { buffer: edgeTableBuffer }
-                },
-                {
-                    binding: 4,
-                    resource: { buffer: triTableBuffer }
-                },
-                {
-                    binding: 5,
-                    resource: { buffer: matrixBuffer }
-                }
-                ]
-            })
-        ]
     }
 
-    const pipelineLayout = device.createPipelineLayout({
+    const shaderPipelineLayout = device.createPipelineLayout({
         label: 'Pipeline Layout',
-        bindGroupLayouts: [bindGroupLayout],
+        bindGroupLayouts: [bindGroupLayoutShader],
+    })
+
+    const computePipelineLayout = device.createPipelineLayout({
+        label: 'Compute Layout',
+        bindGroupLayouts: [bindGroupLayoutCompute],
     })
 
     const shaderModule: GPUShaderModule = device.createShaderModule({
@@ -228,7 +205,7 @@ async function main() {
 
     const shaderPipelineDescriptor: GPURenderPipelineDescriptor = {
         label: 'Shader pipeline',
-        layout: pipelineLayout,
+        layout: shaderPipelineLayout,
         vertex: {
             module: shaderModule,
             entryPoint: "vertexMain",
@@ -255,31 +232,35 @@ async function main() {
 
     let shaderPipeline: GPURenderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
 
+
     const simulationPipeline: GPUComputePipeline = device.createComputePipeline({
         label: 'Compute pipeline',
-        layout: pipelineLayout,
+        layout: computePipelineLayout,
         compute: {
             module: computeModule,
             entryPoint: 'main',
         }
     })
 
-    async function render() {
+    const computeShader = async () => {
+        updateSizePointsBuffer()
+        const encoder: GPUCommandEncoder = device.createCommandEncoder()
+
+        const computePass = encoder.beginComputePass()
+        computePass.setPipeline(simulationPipeline)
+        computePass.setBindGroup(0, bindGroupCompute)
+        computePass.dispatchWorkgroups(gridSize / 4, gridSize / 4, gridSize / 4)
+        computePass.end()
+        device.queue.submit([encoder.finish()])
+    }
+
+    const render = async () => {
         const depthTexture = device.createTexture({
             size: [canvas.width, canvas.height],
             format: "depth24plus",
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         })
-        createPointsBuffer()
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
-
-        const computePass = encoder.beginComputePass()
-        computePass.setPipeline(simulationPipeline)
-        computePass.setBindGroup(0, bindGroup[0])
-        computePass.dispatchWorkgroups(gridSize / 4, gridSize / 4, gridSize / 4)
-        computePass.end()
-
-
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
@@ -301,11 +282,13 @@ async function main() {
 
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
-        renderPass.setBindGroup(0, bindGroup[1])
-        renderPass.draw(points.length / 3)
+        renderPass.setBindGroup(0, bindGroupShader)
+        renderPass.draw(nPoints / 3)
         renderPass.end()
         device.queue.submit([encoder.finish()])
     }
+
+    await computeShader()
 
     render()
 
@@ -317,7 +300,7 @@ async function main() {
         cone: 3,
     };
 
-    type Shape = 'sphere' | 'cylinder' | 'cone' ;
+    type Shape = 'sphere' | 'cylinder' | 'cone';
 
     let gui = new dat.GUI();
     gui.domElement.style.marginTop = "10px";
@@ -332,21 +315,24 @@ async function main() {
 
     const shapes: Shape[] = ['sphere', 'cylinder', 'cone'];
 
-    gui.add(options, "shape", shapes).onChange((value: Shape) => {
+    gui.add(options, "shape", shapes).onChange(async (value: Shape) => {
         shape = shapeMap[value];
         updateParamsBuffer()
+        await computeShader()
         render()
     });
 
-    gui.add(options, "gridSize", 10, 80, 10).onChange((value) => {
+    gui.add(options, "gridSize", 10, 80, 10).onChange(async (value) => {
         gridSize = value;
         updateParamsBuffer()
+        await computeShader()
         render()
     });
 
-    gui.add(options, "interpolation").onChange((value) => {
+    gui.add(options, "interpolation").onChange(async (value) => {
         interpolation = value ? 1 : 0;
         updateParamsBuffer()
+        await computeShader()
         render()
     })
     gui.add(options, "points").onChange((value) => {
