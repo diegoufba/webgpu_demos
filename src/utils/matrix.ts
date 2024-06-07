@@ -103,7 +103,7 @@ export const updateArcRotateCamera = (
     });
 
     canvas.addEventListener('wheel', (event) => {
-        radius += event.deltaY * 0.1
+        radius += event.deltaY * 0.01
         updateCamera()
     })
 

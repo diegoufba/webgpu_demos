@@ -49,5 +49,55 @@ export const setupResizeObserver = (
     observer.observe(canvas);
 }
 
+export const setDepthStencil = (
+    configureDepthStencil: boolean,
+    device: GPUDevice,
+    canvas: HTMLCanvasElement,
+    pipelineDescriptor: GPURenderPipelineDescriptor
+) => {
+
+    let canvasWidth = canvas.width
+    let canvasHeight = canvas.height
+    let depthTexture: GPUTexture
+
+    if (configureDepthStencil) {
+        depthTexture = getDepthTexture()
+        pipelineDescriptor.depthStencil = {
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus'
+        }
+    }
+
+    function getDepthTexture() {
+        return device.createTexture({
+            size: [canvas.width, canvas.height],
+            format: "depth24plus",
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        })
+    }
+
+    const updateDepthTextureSize = () => {
+        if (configureDepthStencil && canvasWidth != canvas.width || canvasHeight != canvas.height) {
+            depthTexture.destroy()
+            depthTexture = getDepthTexture()
+            canvasWidth = canvas.width
+            canvasHeight = canvas.height
+        }
+    }
+
+    const addDepthSpencil = (renderPassDescriptor: GPURenderPassDescriptor) => {
+        if (configureDepthStencil) {
+            renderPassDescriptor.depthStencilAttachment = {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'store'
+            }
+        }
+    }
 
 
+
+    return { updateDepthTextureSize, addDepthSpencil }
+}

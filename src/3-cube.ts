@@ -3,13 +3,13 @@ import triangle from './3-cube.wgsl'
 import { cubeVertexArrayUv, cubeVertexArrayUvIndexData } from './meshes/cube'
 import { initializeWebGPU } from './utils/webgpuInit';
 import { getArcRotateCamera, getProjectionMatrix, toRadians, updateArcRotateCamera } from './utils/matrix';
-import { setupResizeObserver } from './utils/utils';
+import { setDepthStencil, setupResizeObserver } from './utils/utils';
 // import { mat4, vec3 } from 'gl-matrix'
 
 
 async function main() {
 
-    const configureDepthStencil = true
+    // const configureDepthStencil = false
 
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 
@@ -40,9 +40,19 @@ async function main() {
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
     //************************************************************************************************
 
+    const timeBufferArray = new Float32Array([0])
+
+    const timeBuffer: GPUBuffer = device.createBuffer({
+        label: 'Uniform buffer',
+        size: timeBufferArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+
+    device.queue.writeBuffer(timeBuffer, 0, timeBufferArray)
 
 
     const vertices = cubeVertexArrayUv
+    // const vertices = cubeVertexArrayUv2
     const indexData = cubeVertexArrayUvIndexData
 
     const vertexBuffer: GPUBuffer = device.createBuffer({
@@ -54,12 +64,12 @@ async function main() {
     device.queue.writeBuffer(vertexBuffer, 0, vertices)
 
     const indexBuffer: GPUBuffer = device.createBuffer({
-        label:'Index Buffer',
-        size:cubeVertexArrayUvIndexData.byteLength,
+        label: 'Index Buffer',
+        size: cubeVertexArrayUvIndexData.byteLength,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
     })
 
-    device.queue.writeBuffer(indexBuffer,0,indexData)
+    device.queue.writeBuffer(indexBuffer, 0, indexData)
 
     const vertexBufferLayout: GPUVertexBufferLayout = {
         arrayStride: 20,
@@ -76,24 +86,24 @@ async function main() {
 
     const kTextureWidth = 24;
     const kTextureHeight = 14;
-    const _ = [255, 0, 0, 255]; 
-    const d = [255, 255, 255, 255]; 
+    const _ = [246, 245, 242, 255];
+    const d = [0, 0, 0, 255];
     const textureData = new Uint8Array([
-        _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _,_,_,
-        _,_, _, _, d,_,   _,d, d, d, d,_,   _,d, d, d, d,_,   _,_, _, _,_,_,
-        _,_, _, d, d,_,   _,_, _, _, d,_,   _,_, _, _, d,_,   _,_, _, _,_,_,
-        _,_, d, _, d,_,   _,d, d, d, d,_,   _,_, d, d, d,_,   _,_, _, _,_,_,
-        _,_, _, _, d,_,   _,d, _, _, _,_,   _,_, _, _, d,_,   _,_, _, _,_,_,
-        _,_, _, _, d,_,   _,d, d, d, d,_,   _,d, d, d, d,_,   _,_, _, _,_,_,
-        _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _,_,_,
- 
-        _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _,_,_,
-        _,d, _, _, d,_,   _,d, d, d, d,_,   _,d, d, d, d,_,   _,_, _, _,_,_,
-        _,d, _, _, d,_,   _,d, _, _, _,_,   _,d, _, _, _,_,   _,_, _, _,_,_,
-        _,d, d, d, d,_,   _,d, d, d, d,_,   _,d, d, d, d,_,   _,_, _, _,_,_,
-        _,_, _, _, d,_,   _,_, _, _, d,_,   _,d, _, _, d,_,   _,_, _, _,_,_,
-        _,_, _, _, d,_,   _,d, d, d, d,_,   _,d, d, d, d,_,   _,_, _, _,_,_,
-        _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _, _,_,   _,_, _, _,_,_,
+        _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        _, _, d, d, _, _, _, d, d, d, d, _, _, d, d, d, d, _, _, _, _, _, _, _,
+        _, _, _, d, _, _, _, _, _, _, d, _, _, _, _, _, d, _, _, _, _, _, _, _,
+        _, _, _, d, _, _, _, d, d, d, d, _, _, _, d, d, d, _, _, _, _, _, _, _,
+        _, _, _, d, _, _, _, d, _, _, _, _, _, _, _, _, d, _, _, _, _, _, _, _,
+        _, _, d, d, d, _, _, d, d, d, d, _, _, d, d, d, d, _, _, _, _, _, _, _,
+        _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+
+        _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        _, d, _, _, d, _, _, d, d, d, d, _, _, d, d, d, d, _, _, _, _, _, _, _,
+        _, d, _, _, d, _, _, d, _, _, _, _, _, d, _, _, _, _, _, _, _, _, _, _,
+        _, d, d, d, d, _, _, d, d, d, d, _, _, d, d, d, d, _, _, _, _, _, _, _,
+        _, _, _, _, d, _, _, _, _, _, d, _, _, d, _, _, d, _, _, _, _, _, _, _,
+        _, _, _, _, d, _, _, d, d, d, d, _, _, d, d, d, d, _, _, _, _, _, _, _,
+        _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
 
     ].flat());
 
@@ -129,6 +139,11 @@ async function main() {
             visibility: GPUShaderStage.FRAGMENT,
             texture: {}
         },
+        {
+            binding: 3,
+            visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
+            buffer: { type: 'uniform' }
+        },
         ]
     })
 
@@ -161,20 +176,14 @@ async function main() {
             }]
         },
     }
-
-    if (configureDepthStencil) {
-        pipelineDescriptor.depthStencil = {
-            depthWriteEnabled: true,
-            depthCompare: 'less',
-            format: 'depth24plus'
-        };
-    }
+    const enableZbuffer = true
+    const {updateDepthTextureSize,addDepthSpencil } = setDepthStencil(enableZbuffer,device,canvas,pipelineDescriptor)
 
     const pipeline: GPURenderPipeline = device.createRenderPipeline(pipelineDescriptor)
 
     const bindGroup: GPUBindGroup = device.createBindGroup({
         label: 'Bind Group',
-        layout: pipeline.getBindGroupLayout(0),
+        layout: bindGroupLayout,
         entries: [{
             binding: 0,
             resource: { buffer: matrixBuffer }
@@ -187,16 +196,26 @@ async function main() {
             binding: 2,
             resource: texture.createView()
         },
+        {
+            binding: 3,
+            resource: { buffer: timeBuffer }
+        },
         ]
     })
 
+    const initialTime = Date.now()
+    let time = 0
+    let speed = 2 / 1000
 
-    function render() {
-        const depthTexture = device.createTexture({
-            size: [canvas.width, canvas.height, 1],
-            format: "depth24plus",
-            usage: GPUTextureUsage.RENDER_ATTACHMENT
-        })
+
+
+    const render = () => {
+        updateDepthTextureSize()
+        
+        time = (Date.now() - initialTime) * speed
+        timeBufferArray[0] = time
+        device.queue.writeBuffer(timeBuffer, 0, timeBufferArray)
+
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -207,25 +226,24 @@ async function main() {
                 storeOp: 'store'
             }]
         }
-        if (configureDepthStencil) {
-            renderPassDescriptor.depthStencilAttachment = {
-                view: depthTexture.createView(),
-                depthClearValue: 1.0,
-                depthLoadOp: 'clear',
-                depthStoreOp: "store"
-            };
-        }
+        addDepthSpencil(renderPassDescriptor)
+
         const pass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         pass.setPipeline(pipeline)
         pass.setBindGroup(0, bindGroup)
         pass.setVertexBuffer(0, vertexBuffer)
-        pass.setIndexBuffer(indexBuffer,'uint16')
+        pass.setIndexBuffer(indexBuffer, 'uint16')
         pass.drawIndexed(indexData.length)
+        // pass.draw(vertices.length/5)
         pass.end()
         device.queue.submit([encoder.finish()])
     }
 
     render()
+
+    // requestAnimationFrame(render)
+    const UPDATE_INTERVAL = 1;
+    setInterval(render, UPDATE_INTERVAL);
 
     const updateViewMatrix = (newMatrix: Mat4) => {
         viewMatrix = newMatrix
