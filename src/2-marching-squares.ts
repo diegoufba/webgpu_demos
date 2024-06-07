@@ -69,22 +69,28 @@ async function main() {
         device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
     }
 
-    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
+    const bindGroupLayoutCompute: GPUBindGroupLayout = device.createBindGroupLayout({
+        label: 'Bind Group Layout Compute',
+        entries: [
+            {
+                binding: 1,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'storage' }
+            },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'uniform' }
+            },
+        ]
+    })
+
+    const bindGroupLayoutShader: GPUBindGroupLayout = device.createBindGroupLayout({
         label: 'Bind Group Layout',
         entries: [{
             binding: 0,
-            visibility: GPUShaderStage.VERTEX | GPUShaderStage.COMPUTE,
+            visibility: GPUShaderStage.VERTEX,
             buffer: { type: 'read-only-storage' }
-        },
-        {
-            binding: 1,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'storage' }
-        },
-        {
-            binding: 2,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: { type: 'uniform' }
         },
         {
             binding: 3,
@@ -94,86 +100,65 @@ async function main() {
         ]
     })
 
-    let pointsBuffer: GPUBuffer[]
-    // let readPointsBuffer: GPUBuffer
-    let bindGroup: GPUBindGroup[]
-    let points: Float32Array
+    let nPoints: number = gridSize * gridSize * 4 * 2
+    let pointsBuffer: GPUBuffer = device.createBuffer({
+        label: 'Points vertices A',
+        size: nPoints * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    })
 
-    function createPointsBuffer() {
-        points = new Float32Array(gridSize * gridSize * 4 * 2)
+    let bindGroupCompute: GPUBindGroup
+    let bindGroupShader: GPUBindGroup
 
-        pointsBuffer = [
-            device.createBuffer({
-                label: 'Points vertices A',
-                size: points.byteLength,
-                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-                // usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-            }),
-            device.createBuffer({
-                label: 'Points vertices B',
-                size: points.byteLength,
-                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-                // usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-            })
-        ]
+    function updateSizePointsBuffer() {
 
-        // // Buffer usado para devolver os pontos para a cpu (opcional)
-        // readPointsBuffer = device.createBuffer({
-        //     label: "Read Points",
-        //     size: points.length,
-        //     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
-        // })
-        // //************************************************* ******/
+        pointsBuffer.destroy()
 
-        bindGroup = [
-            device.createBindGroup({
-                label: 'Bind Group A',
-                layout: bindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: { buffer: pointsBuffer[0] },
-                },
+        nPoints = gridSize * gridSize * 4 * 2
+        pointsBuffer = device.createBuffer({
+            label: 'Points vertices A',
+            size: nPoints * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        })
+
+        bindGroupCompute = device.createBindGroup({
+            label: 'Bind Group Compute',
+            layout: bindGroupLayoutCompute,
+            entries: [
                 {
                     binding: 1,
-                    resource: { buffer: pointsBuffer[1] },
+                    resource: { buffer: pointsBuffer },
                 },
                 {
                     binding: 2,
                     resource: { buffer: paramsBuffer },
                 },
-                {
-                    binding: 3,
-                    resource: { buffer: matrixBuffer }
-                },
-                ]
-            }),
-            device.createBindGroup({
-                label: 'Bind Group B',
-                layout: bindGroupLayout,
-                entries: [{
-                    binding: 0,
-                    resource: { buffer: pointsBuffer[1] },
-                },
-                {
-                    binding: 1,
-                    resource: { buffer: pointsBuffer[0] },
-                },
-                {
-                    binding: 2,
-                    resource: { buffer: paramsBuffer },
-                },
-                {
-                    binding: 3,
-                    resource: { buffer: matrixBuffer }
-                },
-                ]
-            })
-        ]
+            ]
+        })
+        bindGroupShader = device.createBindGroup({
+            label: 'Bind Group Compute',
+            layout: bindGroupLayoutShader,
+            entries: [{
+                binding: 0,
+                resource: { buffer: pointsBuffer },
+            },
+            {
+                binding: 3,
+                resource: { buffer: matrixBuffer }
+            }
+            ]
+        })
     }
 
-    const pipelineLayout = device.createPipelineLayout({
+
+
+    const shaderPipelineLayout = device.createPipelineLayout({
         label: 'Pipeline Layout',
-        bindGroupLayouts: [bindGroupLayout],
+        bindGroupLayouts: [bindGroupLayoutShader],
+    })
+    const computePipelineLayout = device.createPipelineLayout({
+        label: 'Pipeline Layout',
+        bindGroupLayouts: [bindGroupLayoutCompute],
     })
 
     const shaderModule: GPUShaderModule = device.createShaderModule({
@@ -188,7 +173,7 @@ async function main() {
 
     const shaderPipelineDescriptor: GPURenderPipelineDescriptor = {
         label: 'Shader pipeline',
-        layout: pipelineLayout,
+        layout: shaderPipelineLayout,
         vertex: {
             module: shaderModule,
             entryPoint: "vertexMain",
@@ -210,24 +195,27 @@ async function main() {
 
     const simulationPipeline: GPUComputePipeline = device.createComputePipeline({
         label: 'Compute pipeline',
-        layout: pipelineLayout,
+        layout: computePipelineLayout,
         compute: {
             module: computeModule,
             entryPoint: 'main',
         }
     })
 
-    async function render() {
-        createPointsBuffer()
+    const computeShader = async () => {
+        updateSizePointsBuffer()
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
 
         const computePass = encoder.beginComputePass()
         computePass.setPipeline(simulationPipeline)
-        computePass.setBindGroup(0, bindGroup[0])
+        computePass.setBindGroup(0, bindGroupCompute)
         computePass.dispatchWorkgroups(gridSize / 8, gridSize / 8)
         computePass.end()
+        device.queue.submit([encoder.finish()])
+    }
 
-        // encoder.copyBufferToBuffer(pointsBuffer[1], 0, readPointsBuffer, 0, (gridSize * gridSize * 4 * 2))
+    async function render() {
+        const encoder: GPUCommandEncoder = device.createCommandEncoder()
 
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -242,25 +230,20 @@ async function main() {
 
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
-        renderPass.setBindGroup(0, bindGroup[1])
-        renderPass.draw(points.length / 2)
+        renderPass.setBindGroup(0, bindGroupShader)
+        renderPass.draw(nPoints/2)
+        // renderPass.draw(90000)
         renderPass.end()
         device.queue.submit([encoder.finish()])
 
-        // await Promise.all([
-        //     readPointsBuffer.mapAsync(GPUMapMode.READ),
-        // ]);
-        // const read = new Float32Array(readPointsBuffer.getMappedRange())
-        // const p:number[] = []
-        // read.forEach(element => {
-        //     if (element != 0) {
-        //         p.push(element)
-        //     }
-        // });
-        // console.log(p)
-    }
+        console.log(nPoints/2)
+        //160 000
 
+    }
+    
+    await computeShader()
     render()
+
 
     //*********************************************************************************************************
     // Gui
@@ -286,21 +269,24 @@ async function main() {
 
     const shapes: Shape[] = ['star', 'infinity', 'circle', 'heart'];
 
-    gui.add(options, "shape", shapes).onChange((value: Shape) => {
+    gui.add(options, "shape", shapes).onChange(async (value: Shape) => {
         shape = shapeMap[value];
         updateParamsBuffer()
+        await computeShader()
         render()
     });
 
-    gui.add(options, "gridSize", 10, 2000, 10).onChange((value) => {
+    gui.add(options, "gridSize", 10, 2000, 10).onChange(async (value) => {
         gridSize = value;
         updateParamsBuffer()
+        await computeShader()
         render()
     });
 
-    gui.add(options, "interpolation").onChange((value) => {
+    gui.add(options, "interpolation").onChange(async (value) => {
         interpolation = value ? 1 : 0;
         updateParamsBuffer()
+        await computeShader()
         render()
     })
     gui.add(options, "points").onChange((value) => {

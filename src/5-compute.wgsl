@@ -44,21 +44,21 @@ fn functionValue(p: Point, selector: u32) -> f32 {
     switch (selector) {
     case 1: {
         // Função 3: Esfera
-            let rSphere: f32 = 1.0 - 0.1; // Ajuste de raio
+            let rSphere: f32 = 1.0/2; // Ajuste de raio
             let fSphere = pow(x - xc, 2.0) + pow(y - yc, 2.0) + pow(z - zc, 2.0) - pow(rSphere, 2.0);
             return fSphere;
         }
     case 2: {
         // Função 5: Cilindro
-            let rCyl: f32 = 0.5; // Raio do cilindro
-            let hCyl: f32 = 1.0; // Altura do cilindro
+            let rCyl: f32 = 0.5/2; // Raio do cilindro
+            let hCyl: f32 = 1.0/2; // Altura do cilindro
             let fCyl = max(pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCyl, 2.0), abs(z - zc) - hCyl);
             return fCyl;
         }
     case 3: {
         // Função 6: Cone
-            let rCone: f32 = 0.5; // Raio da base do cone
-            let hCone: f32 = 1.0; // Altura do cone
+            let rCone: f32 = 0.5/2; // Raio da base do cone
+            let hCone: f32 = 1.0/2; // Altura do cone
             let fCone = max(sqrt(pow(x - xc, 2.0) + pow(y - yc, 2.0)) - (rCone * (1.0 - (z - zc) / hCone)), abs(z - zc) - hCone);
             return fCone;
         }

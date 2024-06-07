@@ -87,8 +87,6 @@ fn interpolatedPoints(p1: vec2f, p2: vec2f, fp1: f32, fp2: f32) -> vec2f {
     return vec2f(px, py);
 }
 
-
-    @group(0) @binding(0) var<storage> pointRead: array<vec2<f32>>;
     @group(0) @binding(1) var<storage,read_write> point: array<vec2<f32>>;
     @group(0) @binding(2) var<uniform> params: Params;
 
