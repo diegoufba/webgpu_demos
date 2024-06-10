@@ -10,6 +10,34 @@ import Stats from 'stats.js';
 
 const main = async () => {
 
+    async function loadRawFile(filePath: RequestInfo | URL, dimensions: number[]) {
+        const response = await fetch(filePath);
+        const arrayBuffer = await response.arrayBuffer();
+        const rawData = new Uint8Array(arrayBuffer);
+
+        // Normalizar os dados para a faixa [0, 1]
+        const data = new Float32Array(dimensions[0] * dimensions[1] * dimensions[2]);
+        for (let i = 0; i < rawData.length; i++) {
+            data[i] = rawData[i] / 255.0;
+            // data[i] = rawData[i] ;
+        }
+
+        return data;
+    }
+
+    // const dimensions = [64, 64, 64];
+    const dimensions = [256, 256, 256];
+    // const rawData = await loadRawFile('/webgpu_demos/fuel_64x64x64_uint8.raw', dimensions);
+    const rawData = await loadRawFile('/webgpu_demos/bonsai_256x256x256_uint8.raw', dimensions);
+    // let max = 0
+    // rawData.forEach((d)=>{
+    //     if(d>max){
+    //         max = d
+    //     }
+    // })
+    // console.log(max)
+
+
     const configureDepthStencil = true
 
     const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -22,7 +50,8 @@ const main = async () => {
 
     let modelMatrix = mat4.identity()
     modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(4, 4, 4))
-    modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, -1))
+    // modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, -1))
+    modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-0.5, -0.5, -0.5))
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -40,10 +69,11 @@ const main = async () => {
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
     //************************************************************************************************
 
-    const side = 2;
-    let gridSize: number = 50 // grid = gridSize x gridSize
+    const side = 1;
+    let gridSize: number = 256 // grid = gridSize x gridSize
     let sideLength: number = side / gridSize //square side lenght
     let shape: number = 1
+    let isovalue: number = 0.0
 
     let topology: GPUPrimitiveTopology = 'triangle-list'
 
@@ -53,6 +83,7 @@ const main = async () => {
     paramsUint32View[0] = shape
     paramsUint32View[1] = gridSize
     paramsFloat32View[2] = sideLength
+    paramsFloat32View[3] = isovalue
 
     const paramsBuffer: GPUBuffer = device.createBuffer({
         label: 'Params buffer',
@@ -67,6 +98,7 @@ const main = async () => {
         paramsUint32View[0] = shape
         paramsUint32View[1] = gridSize
         paramsFloat32View[2] = sideLength
+        paramsFloat32View[3] = isovalue
         device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
     }
 
@@ -113,6 +145,11 @@ const main = async () => {
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: { type: 'uniform' }
             },
+            {
+                binding: 6,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: { type: 'read-only-storage' }
+            }
         ]
     })
     const bindGroupLayoutShader: GPUBindGroupLayout = device.createBindGroupLayout({
@@ -129,24 +166,31 @@ const main = async () => {
         }]
     })
 
-    let nPoints: number = gridSize * gridSize * gridSize * 15 * 3 
+    let nVertices: number = gridSize * gridSize * gridSize * 15 * 3
     let pointsBuffer: GPUBuffer = device.createBuffer({
         label: 'Points vertices A',
-        size: nPoints * 4,
+        size: nVertices * 4,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     })
 
+    let isovaluesBuffer: GPUBuffer = device.createBuffer({
+        label: 'Isovalues',
+        size: rawData.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    })
+    device.queue.writeBuffer(isovaluesBuffer, 0, rawData)
+
     let bindGroupCompute: GPUBindGroup
     let bindGroupShader: GPUBindGroup
-    
+
     function updateSizePointsBuffer() {
 
         pointsBuffer.destroy()
 
-        nPoints = gridSize * gridSize * gridSize * 15 * 3 // 15 Pontos por posica no grid
+        nVertices = gridSize * gridSize * gridSize * 15 * 3 // 15 Pontos por posica no grid
         pointsBuffer = device.createBuffer({
             label: 'Points vertices A',
-            size: nPoints * 4,
+            size: nVertices * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         })
 
@@ -169,6 +213,10 @@ const main = async () => {
                 {
                     binding: 4,
                     resource: { buffer: triTableBuffer }
+                },
+                {
+                    binding: 6,
+                    resource: { buffer: isovaluesBuffer }
                 },
             ]
         })
@@ -301,7 +349,7 @@ const main = async () => {
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
         renderPass.setBindGroup(0, bindGroupShader)
-        renderPass.draw((nPoints / 3)/1)
+        renderPass.draw((nVertices / 3) / 1)
         renderPass.end()
         device.queue.submit([encoder.finish()])
     }
@@ -327,6 +375,7 @@ const main = async () => {
     let options = {
         gridSize: gridSize,
         shape: 'sphere' as Shape,
+        isovalue: isovalue,
         points: false,
     };
 
@@ -341,6 +390,12 @@ const main = async () => {
 
     gui.add(options, "gridSize", 10, 80, 10).onChange(async (value) => {
         gridSize = value;
+        updateParamsBuffer()
+        await computeShader()
+        render()
+    });
+    gui.add(options, "isovalue", 0, 1, 0.01).onChange(async (value) => {
+        isovalue = value ;
         updateParamsBuffer()
         await computeShader()
         render()

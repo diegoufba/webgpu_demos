@@ -36,6 +36,7 @@ fn vertexMain(@builtin(vertex_index) vertex: u32) -> VertexOutput {
 
 @fragment
 fn fragmentMain(fragInput: VertexOutput) -> @location(0) vec4f {
-    // return vec4f(1.0, 1.0, 1.0, 1);
-    return fragInput.color;
+    return vec4f(1.0, 1.0, 1.0, 1);
+    // return vec4f(1.0, 0.0, 0.0, 1);
+    // return fragInput.color;
 }

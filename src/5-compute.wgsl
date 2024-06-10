@@ -1,7 +1,8 @@
 struct Params {
     shape: u32,
     gridSize: u32,
-    sideLength: f32
+    sideLength: f32,
+    isovalue: f32
   };
 
 struct Point {
@@ -11,7 +12,7 @@ struct Point {
 }
 
 fn isInside(f: f32) -> f32 {
-    if f <= 0.0 {
+    if f <= params.isovalue {
         return 1.0;
     } else {
         return 0.0;
@@ -32,7 +33,17 @@ fn getState(fp0: f32, fp1: f32, fp2: f32, fp3: f32, fp4: f32, fp5: f32, fp6: f32
     return a * 128 + b * 64 + c * 32 + d * 16 + e * 8 + f * 4 + g * 2 + h;
 }
 
-fn functionValue(p: Point, selector: u32) -> f32 {
+fn functionValue(p: Point, shape: u32) -> f32 {
+    let dimension = params.gridSize;
+    let ix = u32(p.x * f32(dimension));
+    let iy = u32(p.y * f32(dimension));
+    let iz = u32(p.z * f32(dimension));
+
+    let index = iz * dimension * dimension + iy * dimension + ix;
+    return data[index];
+}
+
+fn functionValue2(p: Point, selector: u32) -> f32 {
     let x = p.x;
     let y = p.y;
     let z = p.z;
@@ -64,12 +75,12 @@ fn functionValue(p: Point, selector: u32) -> f32 {
     default: {
             return 1.0;
         }
-}
+    }
 }
 
 
 fn interpolatedPoints(p1: Point, p2: Point, fp1: f32, fp2: f32) -> Point {
-    let isovalue = 0.0;
+    let isovalue = params.isovalue;
     var t: f32 = (isovalue - fp1 / (fp2 - fp1));
 
 
@@ -84,6 +95,7 @@ fn interpolatedPoints(p1: Point, p2: Point, fp1: f32, fp2: f32) -> Point {
     @group(0) @binding(2) var<uniform> params: Params;
     @group(0) @binding(3) var<uniform> edgeTable: array<vec4<i32>,768>;
     @group(0) @binding(4) var<uniform> triTable: array<vec4<i32>,1024>;
+    @group(0) @binding(6) var<storage> data: array<f32>;
 
 
     @compute @workgroup_size(4,4,4)
@@ -96,7 +108,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let z: f32 = f32(depth) * params.sideLength;
 
     let pos: u32 = depth * (params.gridSize * params.gridSize) + row * params.gridSize + col;
-    let nulo = Point(0.0, 0.0, 0.0);
 
     let p0: Point = Point(x, y, z + params.sideLength);
     let p1: Point = Point(x + params.sideLength, y, z + params.sideLength);
@@ -127,6 +138,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     );
 
 
+    let nulo = Point(0.0, 0.0, 0.0);
     var points = array<Point,12>(nulo, nulo, nulo, nulo, nulo, nulo, nulo, nulo, nulo, nulo, nulo, nulo);
 
 

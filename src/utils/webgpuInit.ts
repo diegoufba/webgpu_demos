@@ -8,14 +8,14 @@ export const initializeWebGPU = async (canvas: HTMLCanvasElement) => {
         throw new Error("No appropriate GPUAdapter found.")
     }
     
-    const device: GPUDevice = await adapter.requestDevice()
+    // const device: GPUDevice = await adapter.requestDevice()
 
-    // const device: GPUDevice = await adapter.requestDevice({
-    //     requiredLimits: {
-    //         maxStorageBufferBindingSize: 4294967292,
-    //         maxBufferSize:4294967296
-    //     }
-    // })
+    const device: GPUDevice = await adapter.requestDevice({
+        requiredLimits: {
+            maxStorageBufferBindingSize: 4294967292,
+            maxBufferSize:4294967296
+        }
+    })
 
     const context = canvas.getContext('webgpu')
     if (!context) {
