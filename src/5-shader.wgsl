@@ -27,9 +27,10 @@ fn vertexMain(@builtin(vertex_index) vertex: u32) -> VertexOutput {
     output.pos = position;
 
 
-    let alternatingColor = point.z > 1.4;
+    let alternatingColor = point.x > 1.0 ;
 
-    output.color = select(vec4f(1, 1, 1, 1), vec4f(0, 0, 1, 0), alternatingColor);
+    
+    output.color = select(vec4f(0, 1, 0, 1), vec4f(0, 0, 1, 0), alternatingColor);
     return output;
 }
 

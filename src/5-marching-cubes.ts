@@ -43,7 +43,6 @@ const main = async () => {
     const side = 2;
     let gridSize: number = 50 // grid = gridSize x gridSize
     let sideLength: number = side / gridSize //square side lenght
-    let interpolation: number = 1
     let shape: number = 1
 
     let topology: GPUPrimitiveTopology = 'triangle-list'
@@ -53,8 +52,7 @@ const main = async () => {
     const paramsFloat32View = new Float32Array(paramsArrayBuffer)
     paramsUint32View[0] = shape
     paramsUint32View[1] = gridSize
-    paramsUint32View[2] = interpolation
-    paramsFloat32View[3] = sideLength
+    paramsFloat32View[2] = sideLength
 
     const paramsBuffer: GPUBuffer = device.createBuffer({
         label: 'Params buffer',
@@ -68,8 +66,7 @@ const main = async () => {
         sideLength = side / gridSize //square side lenght
         paramsUint32View[0] = shape
         paramsUint32View[1] = gridSize
-        paramsUint32View[2] = interpolation
-        paramsFloat32View[3] = sideLength
+        paramsFloat32View[2] = sideLength
         device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
     }
 
@@ -330,7 +327,6 @@ const main = async () => {
     let options = {
         gridSize: gridSize,
         shape: 'sphere' as Shape,
-        interpolation: true,
         points: false,
     };
 
@@ -350,12 +346,6 @@ const main = async () => {
         render()
     });
 
-    gui.add(options, "interpolation").onChange(async (value) => {
-        interpolation = value ? 1 : 0;
-        updateParamsBuffer()
-        await computeShader()
-        render()
-    })
     gui.add(options, "points").onChange((value) => {
         topology = value ? 'point-list' : 'triangle-list';
         updateParamsBuffer()

@@ -1,0 +1,12 @@
+// points[0] = Point(x + params.sideLength * 0.5, y, z + params.sideLength);
+// points[1] = Point(x + params.sideLength, y, z + params.sideLength * 0.5);
+// points[2] = Point(x + params.sideLength * 0.5, y, z);
+// points[3] = Point(x, y, z + params.sideLength * 0.5);
+// points[4] = Point(x + params.sideLength * 0.5, y + params.sideLength, z + params.sideLength);
+// points[5] = Point(x + params.sideLength, y + params.sideLength, z + params.sideLength * 0.5);
+// points[6] = Point(x + params.sideLength * 0.5, y + params.sideLength, z);
+// points[7] = Point(x, y + params.sideLength, z + params.sideLength * 0.5);
+// points[8] = Point(x, y + params.sideLength * 0.5, z + params.sideLength);
+// points[9] = Point(x + params.sideLength, y + params.sideLength * 0.5, z + params.sideLength);
+// points[10] = Point(x + params.sideLength, y + params.sideLength * 0.5, z);
+// points[11] = Point(x, y + params.sideLength * 0.5, z);
