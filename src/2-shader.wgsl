@@ -10,7 +10,7 @@ struct TransformMatrix {
 @vertex
 fn vertexMain(@builtin(vertex_index) vertex: u32) -> @builtin(position) vec4f {
     var point: vec2<f32> = points[vertex];
-    let position: vec4f = matrix.projection * matrix.view * matrix.model * vec4f(point,0.0, 1.0);
+    let position: vec4f = matrix.projection * matrix.view * matrix.model * vec4f(point, 0.0, 1.0);
     return position;
 }
 

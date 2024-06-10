@@ -43,7 +43,7 @@ const main = async () => {
     const side = 2;
     let gridSize: number = 50 // grid = gridSize x gridSize
     let sideLength: number = side / gridSize //square side lenght
-    let interpolation: number = 0
+    let interpolation: number = 1
     let shape: number = 1
 
     let topology: GPUPrimitiveTopology = 'triangle-list'
@@ -304,7 +304,7 @@ const main = async () => {
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
         renderPass.setBindGroup(0, bindGroupShader)
-        renderPass.draw(nPoints / 3)
+        renderPass.draw((nPoints / 3)/1)
         renderPass.end()
         device.queue.submit([encoder.finish()])
     }
@@ -330,7 +330,7 @@ const main = async () => {
     let options = {
         gridSize: gridSize,
         shape: 'sphere' as Shape,
-        interpolation: false,
+        interpolation: true,
         points: false,
     };
 

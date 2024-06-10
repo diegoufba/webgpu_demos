@@ -44,7 +44,8 @@ async function main() {
 
     let topology: GPUPrimitiveTopology = 'line-list'
 
-    const paramsArrayBuffer = new ArrayBuffer(16) // 2 u32 e 2 f32
+    const paramsArrayBuffer = new ArrayBuffer(20) // 2 u32 e 2 f32
+    // const paramsArrayBuffer = new ArrayBuffer(16) // 2 u32 e 2 f32
     const paramsUint32View = new Uint32Array(paramsArrayBuffer)
     const paramsFloat32View = new Float32Array(paramsArrayBuffer)
     paramsUint32View[0] = shape
@@ -58,6 +59,15 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
     device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
+
+    const offsetArrayBuffer = new Uint32Array([0])
+
+    const offsetBuffer: GPUBuffer = device.createBuffer({
+        label: 'Offset buffer',
+        size: offsetArrayBuffer.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+    device.queue.writeBuffer(offsetBuffer, 0, offsetArrayBuffer)
 
     function updateParamsBuffer() {
         // resolution = Math.min(width, height) // pixels resolution x resolution
@@ -145,7 +155,7 @@ async function main() {
             {
                 binding: 3,
                 resource: { buffer: matrixBuffer }
-            }
+            },
             ]
         })
     }
@@ -214,6 +224,8 @@ async function main() {
         device.queue.submit([encoder.finish()])
     }
 
+    // let step = (nPoints / 2) / 1000
+    // let n = step
     async function render() {
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
 
@@ -231,18 +243,32 @@ async function main() {
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
         renderPass.setBindGroup(0, bindGroupShader)
-        renderPass.draw(nPoints/2)
+
+        // renderPass.draw(n)
+        renderPass.draw(nPoints / 2)
         // renderPass.draw(90000)
         renderPass.end()
         device.queue.submit([encoder.finish()])
 
-        console.log(nPoints/2)
-        //160 000
+        // n += step
+
+        // console.log(n)
+        // //160 000
+        // if (n < nPoints / 2) {
+        //     window.requestAnimationFrame(render)
+        // }
 
     }
-    
+
     await computeShader()
-    render()
+    // render()
+
+    // window.requestAnimationFrame(render)
+
+    // const UPDATE_INTERVAL = 60;
+    // if (offset < nPoints / 2) {
+    //     setInterval(render, UPDATE_INTERVAL)
+    // }
 
 
     //*********************************************************************************************************
