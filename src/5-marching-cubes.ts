@@ -25,10 +25,10 @@ const main = async () => {
         return data;
     }
 
-    // const dimensions = [64, 64, 64];
-    const dimensions = [256, 256, 256];
-    // const rawData = await loadRawFile('/webgpu_demos/fuel_64x64x64_uint8.raw', dimensions);
-    const rawData = await loadRawFile('/webgpu_demos/bonsai_256x256x256_uint8.raw', dimensions);
+    const dimensions = [64, 64, 64];
+    // const dimensions = [256, 256, 256];
+    const rawData = await loadRawFile('/webgpu_demos/fuel_64x64x64_uint8.raw', dimensions);
+    // const rawData = await loadRawFile('/webgpu_demos/bonsai_256x256x256_uint8.raw', dimensions);
     // let max = 0
     // rawData.forEach((d)=>{
     //     if(d>max){
@@ -70,7 +70,7 @@ const main = async () => {
     //************************************************************************************************
 
     const side = 1;
-    let gridSize: number = 256 // grid = gridSize x gridSize
+    let gridSize: number = 64 // grid = gridSize x gridSize
     let sideLength: number = side / gridSize //square side lenght
     let shape: number = 1
     let isovalue: number = 0.0

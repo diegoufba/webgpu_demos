@@ -17,7 +17,8 @@ export default defineConfig({
         cube: './src/3-cube.html',
         wave: './src/4-wave.html',
         marching_cubes: './src/5-marching-cubes.html',
-        sprites: './src/6-sprites.html'
+        sprites: './src/6-sprites.html',
+        light:'./src/7-light.html'
       },
     },
   },
