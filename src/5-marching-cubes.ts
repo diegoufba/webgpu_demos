@@ -10,6 +10,13 @@ import Stats from 'stats.js';
 
 const main = async () => {
 
+
+    // for (let index = 0; index < 15; index++) {
+    //     let alternatingColor = Math.floor(index / 3) % 2 == 0;
+    //     console.log(alternatingColor);
+    // }
+
+
     async function loadRawFile(filePath: RequestInfo | URL, dimensions: number[]) {
         const response = await fetch(filePath);
         const arrayBuffer = await response.arrayBuffer();
@@ -49,7 +56,7 @@ const main = async () => {
     let viewMatrix = getArcRotateCamera()
 
     let modelMatrix = mat4.identity()
-    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(4, 4, 4))
+    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(6, 6, 6))
     // modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, -1))
     modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-0.5, -0.5, -0.5))
 
@@ -74,6 +81,7 @@ const main = async () => {
     let sideLength: number = side / gridSize //square side lenght
     let shape: number = 1
     let isovalue: number = 0.0
+    let drawingPercentage: number = 100
 
     let topology: GPUPrimitiveTopology = 'triangle-list'
 
@@ -101,6 +109,15 @@ const main = async () => {
         paramsFloat32View[3] = isovalue
         device.queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer)
     }
+    let color = 0
+    const colorArrayBuffer = new Uint32Array([color])
+
+    const colorBuffer: GPUBuffer = device.createBuffer({
+        label: 'Params buffer',
+        size: colorArrayBuffer.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+    device.queue.writeBuffer(colorBuffer, 0, colorArrayBuffer)
 
     const edgeTableArray = new Int32Array(getEdgeTable().flat())
 
@@ -163,7 +180,13 @@ const main = async () => {
             binding: 5,
             visibility: GPUShaderStage.VERTEX,
             buffer: { type: 'uniform' }
-        }]
+        },
+        {
+            binding: 7,
+            visibility: GPUShaderStage.VERTEX,
+            buffer: { type: 'uniform' }
+        },
+        ]
     })
 
     let nVertices: number = gridSize * gridSize * gridSize * 15 * 3
@@ -230,7 +253,11 @@ const main = async () => {
             {
                 binding: 5,
                 resource: { buffer: matrixBuffer }
-            }
+            },
+            {
+                binding: 7,
+                resource: { buffer: colorBuffer },
+            },
             ]
         })
     }
@@ -349,7 +376,7 @@ const main = async () => {
         const renderPass: GPURenderPassEncoder = encoder.beginRenderPass(renderPassDescriptor)
         renderPass.setPipeline(shaderPipeline)
         renderPass.setBindGroup(0, bindGroupShader)
-        renderPass.draw((nVertices / 3) / 1)
+        renderPass.draw((nVertices / 3) * (drawingPercentage / 100))
         renderPass.end()
         device.queue.submit([encoder.finish()])
     }
@@ -364,9 +391,11 @@ const main = async () => {
         sphere: 1,
         cylinder: 2,
         cone: 3,
+        fuel: 4,
+
     };
 
-    type Shape = 'sphere' | 'cylinder' | 'cone';
+    type Shape = 'sphere' | 'cylinder' | 'cone' | 'fuel';
 
     let gui = new dat.GUI();
     gui.domElement.style.marginTop = "10px";
@@ -377,35 +406,74 @@ const main = async () => {
         shape: 'sphere' as Shape,
         isovalue: isovalue,
         points: false,
+        drawing: 100,
+        color: false
     };
 
-    const shapes: Shape[] = ['sphere', 'cylinder', 'cone'];
+    const shapes: Shape[] = ['sphere', 'cylinder', 'cone', 'fuel'];
 
     gui.add(options, "shape", shapes).onChange(async (value: Shape) => {
         shape = shapeMap[value];
+        if (shape == 4) {
+            gridSize = 64
+            options.gridSize = 64;
+            gridSizeController.updateDisplay();
+            if (gridSizeController.domElement.parentElement) {
+                gridSizeController.domElement.parentElement.style.display = 'none';
+            }
+            if (isovalueController.domElement.parentElement) {
+                isovalueController.domElement.parentElement.style.display = 'block';
+            }
+        } else {
+            if (gridSizeController.domElement.parentElement) {
+                gridSizeController.domElement.parentElement.style.display = 'block';
+            }
+            if (isovalueController.domElement.parentElement) {
+                isovalue = 0.0
+                options.isovalue = isovalue;
+                isovalueController.updateDisplay();
+                isovalueController.domElement.parentElement.style.display = 'none';
+            }
+        }
         updateParamsBuffer()
         await computeShader()
         render()
     });
 
-    gui.add(options, "gridSize", 10, 80, 10).onChange(async (value) => {
+    gui.add(options, "drawing", 1, 100, 1).onChange(async (value) => {
+        drawingPercentage = value;
+        render()
+    });
+
+    const gridSizeController = gui.add(options, "gridSize", 10, 64, 1).onChange(async (value) => {
         gridSize = value;
         updateParamsBuffer()
         await computeShader()
         render()
     });
-    gui.add(options, "isovalue", 0, 1, 0.01).onChange(async (value) => {
-        isovalue = value ;
+    const isovalueController = gui.add(options, "isovalue", 0, 1, 0.01).onChange(async (value) => {
+        isovalue = value;
         updateParamsBuffer()
         await computeShader()
         render()
     });
+    if (isovalueController.domElement.parentElement) {
+        isovalueController.domElement.parentElement.style.display = 'none';
+    }
 
     gui.add(options, "points").onChange((value) => {
         topology = value ? 'point-list' : 'triangle-list';
         updateParamsBuffer()
         shaderPipelineDescriptor.primitive = { topology: topology }
         shaderPipeline = device.createRenderPipeline(shaderPipelineDescriptor)
+        render()
+    })
+
+    gui.add(options, "color").onChange(async (value) => {
+        color = value ? 1 : 0;
+        colorArrayBuffer[0] = color
+        device.queue.writeBuffer(colorBuffer, 0, colorArrayBuffer)
+        await computeShader()
         render()
     })
 

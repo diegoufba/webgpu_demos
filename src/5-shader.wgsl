@@ -17,6 +17,7 @@ struct VertexOutput {
 
 @group(0) @binding(0) var<storage> points: array<Point>;
 @group(0) @binding(5) var<uniform> matrix: TransformMatrix ;
+@group(0) @binding(7) var<uniform> color: u32 ;
 
 @vertex
 fn vertexMain(@builtin(vertex_index) vertex: u32) -> VertexOutput {
@@ -26,17 +27,19 @@ fn vertexMain(@builtin(vertex_index) vertex: u32) -> VertexOutput {
     var output: VertexOutput;
     output.pos = position;
 
+    if color == 0 {
+        output.color = vec4f(point.x, point.y, point.z, 1.0);
+    } else {
+        let alternatingColor = floor(f32(vertex) / 3) % 2 == 0;
+        output.color = select(vec4f(0, 1, 0, 1), vec4f(0, 0, 1, 0), alternatingColor);
+    }
 
-    let alternatingColor = point.x > 1.0 ;
-
-    
-    output.color = select(vec4f(0, 1, 0, 1), vec4f(0, 0, 1, 0), alternatingColor);
     return output;
 }
 
 @fragment
 fn fragmentMain(fragInput: VertexOutput) -> @location(0) vec4f {
-    return vec4f(1.0, 1.0, 1.0, 1);
+    // return vec4f(1.0, 1.0, 1.0, 1);
     // return vec4f(1.0, 0.0, 0.0, 1);
-    // return fragInput.color;
+    return fragInput.color;
 }
