@@ -38,8 +38,8 @@ fn getState(fp1: f32, fp2: f32, fp3: f32, fp4: f32) -> f32 {
 fn functionValue(p: vec2f, selector: u32) -> f32 {
     let x = p.x;
     let y = p.y;
-    var xc: f32 = 1.0;
-    var yc: f32 = 1.0;
+    var xc: f32 = 0.5;
+    var yc: f32 = 0.5;
 
     // Variáveis comuns para algumas das funções
     let xp = x - xc;
@@ -51,26 +51,26 @@ fn functionValue(p: vec2f, selector: u32) -> f32 {
             let theta = atan2(yp, xp);
             let r = sqrt(xp * xp + yp * yp);
             let n: f32 = 10.0;
-            let star_r = 0.5 + 0.25 * sin(n * theta);
+            let star_r = 0.3 + 0.15 * sin(n * theta);
             return r - star_r;
         }
         case 2: {
             // Função 2: Infinito
-            let a: f32 = 0.5;
+            let a: f32 = 0.3;
             let left = (xp * xp + yp * yp) * (xp * xp + yp * yp);
             let right = 2.0 * a * a * (xp * xp - yp * yp);
             return left - right;
         }
         case 3: {
             // Função 3: Círculo
-            let rCircle: f32 = 1.0 - 0.1; // Ajuste de raio
+            let rCircle: f32 = 0.3; // Ajuste de raio
             let fCircle = pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCircle, 2.0);
             return fCircle;
         }
         case 4: {
             // Função 4: Coração
-            let xpHeart = (x - xc) / 0.75;
-            let ypHeart = (y - yc) / 0.75;
+            let xpHeart = (x - xc) / 0.3;
+            let ypHeart = (y - yc) / 0.3;
             let fHeart = pow(xpHeart * xpHeart + ypHeart * ypHeart - 1.0, 3.0) - xpHeart * xpHeart * pow(ypHeart, 3.0);
             return fHeart;
         }

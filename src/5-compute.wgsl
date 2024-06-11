@@ -33,16 +33,6 @@ fn getState(fp0: f32, fp1: f32, fp2: f32, fp3: f32, fp4: f32, fp5: f32, fp6: f32
     return a * 128 + b * 64 + c * 32 + d * 16 + e * 8 + f * 4 + g * 2 + h;
 }
 
-fn functionValue2(p: Point, shape: u32) -> f32 {
-    let dimension = params.gridSize;
-    let ix = u32(p.x * f32(dimension));
-    let iy = u32(p.y * f32(dimension));
-    let iz = u32(p.z * f32(dimension));
-
-    let index = iz * dimension * dimension + iy * dimension + ix;
-    return data[index];
-}
-
 fn functionValue(p: Point, selector: u32) -> f32 {
     let x = p.x;
     let y = p.y;
@@ -60,15 +50,15 @@ fn functionValue(p: Point, selector: u32) -> f32 {
         }
     case 2: {
         // Função 5: Cilindro
-            let rCyl: f32 = 0.25; // Raio do cilindro
-            let hCyl: f32 = 0.3; // Altura do cilindro
+            let rCyl: f32 = 0.2; // Raio do cilindro
+            let hCyl: f32 = 0.2; // Altura do cilindro
             let fCyl = max(pow(x - xc, 2.0) + pow(y - yc, 2.0) - pow(rCyl, 2.0), abs(z - zc) - hCyl);
             return fCyl;
         }
     case 3: {
         // Função 6: Cone
-            let rCone: f32 = 0.2; // Raio da base do cone
-            let hCone: f32 = 0.3; // Altura do cone
+            let rCone: f32 = 0.1; // Raio da base do cone
+            let hCone: f32 = 0.2; // Altura do cone
             let fCone = max(sqrt(pow(x - xc, 2.0) + pow(y - yc, 2.0)) - (rCone * (1.0 - (z - zc) / hCone)), abs(z - zc) - hCone);
             return fCone;
         }

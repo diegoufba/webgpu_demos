@@ -17,8 +17,8 @@ async function main() {
     let viewMatrix = getArcRotateCamera()
 
     let modelMatrix = mat4.identity()
-    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(4, 4, 1))
-    modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-1, -1, 0))
+    modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(6, 6, 6))
+    modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(-0.5, -0.5, 0))
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -36,7 +36,9 @@ async function main() {
     device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray)
     //************************************************************************************************
 
-    const side = 2;
+
+
+    const side = 1;
     let gridSize: number = 200 // grid = gridSize x gridSize
     let sideLength: number = side / gridSize //square side lenght
     let interpolation: number = 1
@@ -110,10 +112,10 @@ async function main() {
         ]
     })
 
-    let nPoints: number = gridSize * gridSize * 4 * 2
+    let nVertices: number = gridSize * gridSize * 4 * 2
     let pointsBuffer: GPUBuffer = device.createBuffer({
         label: 'Points vertices A',
-        size: nPoints * 4,
+        size: nVertices * 4,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     })
 
@@ -124,10 +126,10 @@ async function main() {
 
         pointsBuffer.destroy()
 
-        nPoints = gridSize * gridSize * 4 * 2
+        nVertices = gridSize * gridSize * 4 * 2
         pointsBuffer = device.createBuffer({
             label: 'Points vertices A',
-            size: nPoints * 4,
+            size: nVertices * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         })
 
@@ -181,6 +183,8 @@ async function main() {
         code: compute
     })
 
+    const sampleCount = 4;
+
     const shaderPipelineDescriptor: GPURenderPipelineDescriptor = {
         label: 'Shader pipeline',
         layout: shaderPipelineLayout,
@@ -198,6 +202,38 @@ async function main() {
         primitive: {
             topology: topology
             // topology: 'point-list'
+        },
+        multisample: {
+            count: sampleCount
+        }
+    }
+
+    let canvasWidth = canvas.width
+    let canvasHeight = canvas.height
+    let texture = device.createTexture({
+        size: [canvas.width, canvas.height],
+        sampleCount,
+        format: canvasFormat,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
+    })
+    let view = texture.createView()
+
+    function getMSAAtexture() {
+        return device.createTexture({
+            size: [canvas.width, canvas.height],
+            sampleCount,
+            format: canvasFormat,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        })
+    }
+
+    function updateMSAAtextureSize() {
+        if (canvasWidth != canvas.width || canvasHeight != canvas.height) {
+            texture.destroy()
+            texture = getMSAAtexture()
+            view = texture.createView()
+            canvasWidth = canvas.width
+            canvasHeight = canvas.height
         }
     }
 
@@ -227,16 +263,20 @@ async function main() {
     // let step = (nPoints / 2) / 1000
     // let n = step
     async function render() {
+        updateMSAAtextureSize()
         const encoder: GPUCommandEncoder = device.createCommandEncoder()
 
         const textureView: GPUTextureView = context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
-                view: textureView,
+                // view: textureView,
+                view: view,
+                resolveTarget: textureView,
                 loadOp: 'clear',
                 clearValue: { r: 0.2, g: 0.2, b: 0.298, a: 1 },
                 // clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1 },
                 storeOp: 'store'
+                // storeOp: 'store'
             }]
         }
 
@@ -245,7 +285,7 @@ async function main() {
         renderPass.setBindGroup(0, bindGroupShader)
 
         // renderPass.draw(n)
-        renderPass.draw(nPoints / 2)
+        renderPass.draw(nVertices / 2)
         // renderPass.draw(90000)
         renderPass.end()
         device.queue.submit([encoder.finish()])
@@ -254,7 +294,7 @@ async function main() {
 
         // console.log(n)
         // //160 000
-        // if (n < nPoints / 2) {
+        // if (n < nVertices / 2) {
         //     window.requestAnimationFrame(render)
         // }
 
@@ -266,7 +306,7 @@ async function main() {
     // window.requestAnimationFrame(render)
 
     // const UPDATE_INTERVAL = 60;
-    // if (offset < nPoints / 2) {
+    // if (offset < nVertices / 2) {
     //     setInterval(render, UPDATE_INTERVAL)
     // }
 

@@ -30,7 +30,9 @@ fn vertexMain(@builtin(vertex_index) vertex: u32) -> VertexOutput {
     if color == 0 {
         output.color = vec4f(point.x, point.y, point.z, 1.0);
     } else {
-        let alternatingColor = floor(f32(vertex) / 3) % 2 == 0;
+        // let alternatingColor = floor(f32(vertex) / 3) % 2 == 0;
+        let alternatingColor = (floor(point.x * 200.0) % 2.0) == 0.0;
+
         output.color = select(vec4f(0, 1, 0, 1), vec4f(0, 0, 1, 0), alternatingColor);
     }
 
