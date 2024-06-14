@@ -1,7 +1,7 @@
 // import { mat4 } from 'wgpu-matrix'
 import { mat4, Mat4, vec3 } from 'wgpu-matrix'
 import sprite from './6-sprites.wgsl'
-import { updateArcRotateCamera, getArcRotateCamera, getProjectionMatrix } from './utils/matrix'
+import { updateFirstPersonCamera, getFirstPersonCamera, getProjectionMatrix } from './utils/matrix'
 import { getTexture, setupResizeObserver } from './utils/utils'
 import { initializeWebGPU } from './utils/webgpuInit'
 import { createPlane } from './meshes/plane'
@@ -21,7 +21,7 @@ async function main() {
     modelMatrix = mat4.scale(modelMatrix, vec3.fromValues(1 / 8, 1 / 8, 1))
     modelMatrix = mat4.translate(modelMatrix, vec3.fromValues(0, 1, 0))
     
-    let viewMatrix = getArcRotateCamera()
+    let viewMatrix = getFirstPersonCamera()
 
     //Set Uniform Buffer *****************************************************************************
     const matrixBufferArray = new Float32Array(4 * 4 * 3)
@@ -294,7 +294,7 @@ async function main() {
     }
 
     // update camera on mouse move
-    updateArcRotateCamera(canvas, matrixBufferArray, matrixBuffer, device, render, updateViewMatrix)
+    updateFirstPersonCamera(canvas, matrixBufferArray, matrixBuffer, device, render, updateViewMatrix)
 
     const updateProjectionMatrix = (newMatrix: Mat4) => {
         projectionMatrix = newMatrix;

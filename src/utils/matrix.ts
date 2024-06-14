@@ -124,13 +124,101 @@ export const updateArcRotateCamera = (
             case 'ArrowRight':
                 target[0] += translationSpeed;
                 break;
-            case 'w':
-                target[2] -= translationSpeed;
-                break;
-            case 's':
-                target[2] += translationSpeed;
-                break;
         }
         updateCamera();
     });
 }
+
+export const getFirstPersonCamera = () => {
+    let eye = vec3.fromValues(0, 1, 0);  // Posição inicial da câmera
+    let front = vec3.fromValues(0, 0, -1);  // Direção inicial
+    let up = vec3.fromValues(0, 1, 0);  // Vetor para cima
+
+    let viewMatrix = mat4.lookAt(eye, vec3.add(eye, front), up);
+
+    return viewMatrix;
+};
+
+export const updateFirstPersonCamera = (
+    canvas: HTMLCanvasElement,
+    matrixBufferArray: Float32Array,
+    matrixBuffer: GPUBuffer,
+    device: GPUDevice,
+    render: () => void,
+    updateViewMatrix: (newMatrix: Mat4) => void
+) => {
+    let eye = vec3.fromValues(0, 1, 0);  // Posição inicial da câmera
+    let yaw = -Math.PI / 2;  // Ângulo de rotação horizontal (inicialmente olhando para a frente)
+    let pitch = 0.0;  // Ângulo de rotação vertical
+    let front = vec3.fromValues(0, 0, -1);  // Direção inicial
+    let up = vec3.fromValues(0, 1, 0);  // Vetor para cima
+    const sensitivity = 0.001;  // Sensibilidade do mouse
+    const movementSpeed = 0.2;  // Velocidade de movimento
+
+    function updateCamera() {
+        // Calcular a direção da câmera
+        front[0] = Math.cos(yaw) * Math.cos(pitch);
+        front[1] = Math.sin(pitch);
+        front[2] = Math.sin(yaw) * Math.cos(pitch);
+        vec3.normalize(front, front);
+
+        // Atualizar a matriz de visualização
+        const newViewMatrix = mat4.lookAt(eye, vec3.add(eye, front), up);
+
+        updateViewMatrix(newViewMatrix);
+        matrixBufferArray.set(newViewMatrix, 16);
+        device.queue.writeBuffer(matrixBuffer, 0, matrixBufferArray);
+        render();
+    }
+
+    // let previousMousePosition = { x: 0, y: 0 };
+
+    // canvas.addEventListener('mousedown', (event) => {
+    //     previousMousePosition = { x: event.clientX, y: event.clientY };
+    //     canvas.requestPointerLock();
+    // });
+
+
+    // Controle do mouse
+    canvas.addEventListener('mousedown', () => {
+        canvas.requestPointerLock();
+    });
+
+    document.addEventListener('mousemove', (event) => {
+        if (document.pointerLockElement === canvas) {
+            const deltaX = event.movementX * sensitivity;
+            const deltaY = event.movementY * sensitivity;
+
+            yaw += deltaX;
+            pitch -= deltaY;
+
+            // Limitar o ângulo de pitch para evitar a inversão
+            if (pitch > Math.PI / 2) pitch = Math.PI / 2;
+            if (pitch < -Math.PI / 2) pitch = -Math.PI / 2;
+
+            updateCamera();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        switch (event.key) {
+            case 'w':
+                vec3.addScaled(eye, front, movementSpeed, eye);
+                break;
+            case 's':
+                vec3.addScaled(eye, front, -movementSpeed, eye);
+                break;
+            case 'a':
+                const right = vec3.cross(front, up);
+                vec3.normalize(right, right);
+                vec3.addScaled(eye, right, -movementSpeed, eye);
+                break;
+            case 'd':
+                const left = vec3.cross(front, up);
+                vec3.normalize(left, left);
+                vec3.addScaled(eye, left, movementSpeed, eye);
+                break;
+        }
+        updateCamera();
+    });
+};
